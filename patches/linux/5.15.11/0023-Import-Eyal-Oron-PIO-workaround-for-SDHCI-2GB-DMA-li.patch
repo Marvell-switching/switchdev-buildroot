@@ -1,0 +1,78 @@
+From 9e4f084ea4e393808f8e2d43154bb63fa2dce0e6 Mon Sep 17 00:00:00 2001
+From: Elad Nachman <enachman@marvell.com>
+Date: Tue, 25 Jan 2022 20:26:40 +0200
+Subject: [PATCH 23/40] Import Eyal Oron PIO workaround for SDHCI 2GB DMA limit
+
+Signed-off-by: Elad Nachman <enachman@marvell.com>
+---
+ arch/arm64/boot/dts/marvell/ac5-4gb.dtsi |  2 +-
+ arch/arm64/boot/dts/marvell/ac5.dtsi     |  2 +-
+ drivers/mmc/host/sdhci-xenon.c           | 12 ++++++++++++
+ 3 files changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/marvell/ac5-4gb.dtsi b/arch/arm64/boot/dts/marvell/ac5-4gb.dtsi
+index 08b598cb0809..3ed3ea297cd9 100644
+--- a/arch/arm64/boot/dts/marvell/ac5-4gb.dtsi
++++ b/arch/arm64/boot/dts/marvell/ac5-4gb.dtsi
+@@ -255,7 +255,7 @@
+ 		};
+ 
+ 		sdhci@805c0000 {
+-			compatible = "marvell, ac5-sdhci", "marvell,armada-ap806-sdhci";
++			compatible = "marvell,ac5-sdhci", "marvell,armada-ap806-sdhci";
+ 			reg = <0x0 0x805c0000 0x0 0x300>;
+ 			interrupts = <GIC_SPI 92 IRQ_TYPE_LEVEL_HIGH>;
+ 			clocks = <&core_clock>;
+diff --git a/arch/arm64/boot/dts/marvell/ac5.dtsi b/arch/arm64/boot/dts/marvell/ac5.dtsi
+index 6ae0f1c3cb99..a2b30142bbfa 100644
+--- a/arch/arm64/boot/dts/marvell/ac5.dtsi
++++ b/arch/arm64/boot/dts/marvell/ac5.dtsi
+@@ -255,7 +255,7 @@
+ 		};
+ 
+ 		sdhci@805c0000 {
+-			compatible = "marvell, ac5-sdhci", "marvell,armada-ap806-sdhci";
++			compatible = "marvell,ac5-sdhci", "marvell,armada-ap806-sdhci";
+ 			reg = <0x0 0x805c0000 0x0 0x300>;
+ 			interrupts = <GIC_SPI 92 IRQ_TYPE_LEVEL_HIGH>;
+ 			clocks = <&core_clock>;
+diff --git a/drivers/mmc/host/sdhci-xenon.c b/drivers/mmc/host/sdhci-xenon.c
+index 66595114b073..2fc117f9b694 100644
+--- a/drivers/mmc/host/sdhci-xenon.c
++++ b/drivers/mmc/host/sdhci-xenon.c
+@@ -19,6 +19,7 @@
+ #include <linux/pm.h>
+ #include <linux/pm_runtime.h>
+ #include <linux/of_reserved_mem.h>
++#include <linux/mm.h>
+ 
+ #include "sdhci-pltfm.h"
+ #include "sdhci-xenon.h"
+@@ -433,6 +434,8 @@ static int xenon_probe_params(struct platform_device *pdev)
+ 	struct xenon_priv *priv = sdhci_pltfm_priv(pltfm_host);
+ 	u32 sdhc_id, nr_sdhc;
+ 	u32 tuning_count;
++	struct device_node *np = pdev->dev.of_node;
++	struct sysinfo si;
+ 
+ 	/* Disable HS200 on Armada AP806 */
+ 	if (priv->hw_version == XENON_AP806)
+@@ -461,6 +464,15 @@ static int xenon_probe_params(struct platform_device *pdev)
+ 	}
+ 	priv->tuning_count = tuning_count;
+ 
++	si_meminfo(&si);
++
++	if (of_device_is_compatible(np, "marvell,ac5-sdhci") &&
++		((si.totalram * si.mem_unit) > 0x80000000 /*2G*/)) {
++		host->quirks |= SDHCI_QUIRK_BROKEN_DMA;
++		host->quirks |= SDHCI_QUIRK_BROKEN_ADMA;
++		dev_info(mmc_dev(mmc), "Disabling DMA because of 2GB DMA access limit.\n");
++	}
++
+ 	return xenon_phy_parse_params(dev, host);
+ }
+ 
+-- 
+2.17.1
+

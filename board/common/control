@@ -1,0 +1,5 @@
+Package: sw-agentd
+Version: 1.0.0
+Architecture: arm64
+Maintainer: Elad Nachman <enachman@localhost.localdomain>
+Description: switch agent daemon firmware.

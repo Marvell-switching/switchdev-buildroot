@@ -1,0 +1,6 @@
+config BR2_PACKAGE_PRESTERA_LOG
+        bool "prestera-log"
+        select BR2_PACKAGE_DCRON
+        select BR2_PACKAGE_LOGROTATE
+        help
+          Logging support for Prestera device.

@@ -1,0 +1,463 @@
+From 2571f7498fe19cb8628357add133a148a2774cb7 Mon Sep 17 00:00:00 2001
+From: Volodymyr Mytnyk <volodymyr.mytnyk@plvision.eu>
+Date: Mon, 24 Jan 2022 22:15:36 +0200
+Subject: [PATCH 38/40] Add support for ets and tbf qdisc
+
+Add handlers for ets and tbf qdiscs.
+Add placeholders for ets and tbf stats.
+
+JIRA: SWITCHDEV-2445
+
+Signed-off-by: Serhiy Boiko <serhiy.boiko@plvision.eu>
+Signed-off-by: Volodymyr Mytnyk <volodymyr.mytnyk@plvision.eu>
+Change-Id: I9d5c7d16000fa2d06a2cdcaacdf00dcf26f4a04f
+---
+ .../net/ethernet/marvell/prestera/Makefile    |   2 +-
+ .../net/ethernet/marvell/prestera/prestera.h  |   2 +
+ .../ethernet/marvell/prestera/prestera_hw.c   |  77 +++++++
+ .../ethernet/marvell/prestera/prestera_hw.h   |  11 +
+ .../ethernet/marvell/prestera/prestera_main.c |  10 +
+ .../marvell/prestera/prestera_qdisc.c         | 202 ++++++++++++++++++
+ .../marvell/prestera/prestera_qdisc.h         |  20 ++
+ 7 files changed, 323 insertions(+), 1 deletion(-)
+ create mode 100644 drivers/net/ethernet/marvell/prestera/prestera_qdisc.c
+ create mode 100644 drivers/net/ethernet/marvell/prestera/prestera_qdisc.h
+
+diff --git a/drivers/net/ethernet/marvell/prestera/Makefile b/drivers/net/ethernet/marvell/prestera/Makefile
+index 1928d2056131..6f0ad3f059ab 100644
+--- a/drivers/net/ethernet/marvell/prestera/Makefile
++++ b/drivers/net/ethernet/marvell/prestera/Makefile
+@@ -6,7 +6,7 @@ prestera-objs := prestera_main.o \
+ 	prestera_rxtx.o prestera_dsa.o prestera_router.o \
+ 	prestera_acl.o prestera_flow.o prestera_flower.o prestera_matchall.o prestera_debugfs.o \
+ 	prestera_ct.o prestera_ethtool.o prestera_counter.o \
+-	prestera_fw.o prestera_router_hw.o prestera_dcb.o
++	prestera_fw.o prestera_router_hw.o prestera_dcb.o prestera_qdisc.o
+ 
+ prestera-$(CONFIG_MRVL_PRESTERA_DEBUG) += prestera_log.o
+ ccflags-$(CONFIG_MRVL_PRESTERA_DEBUG) += -DCONFIG_MRVL_PRESTERA_DEBUG
+diff --git a/drivers/net/ethernet/marvell/prestera/prestera.h b/drivers/net/ethernet/marvell/prestera/prestera.h
+index b9787d382db5..b7434c173181 100644
+--- a/drivers/net/ethernet/marvell/prestera/prestera.h
++++ b/drivers/net/ethernet/marvell/prestera/prestera.h
+@@ -48,6 +48,7 @@ struct prestera_span;
+ struct prestera_span_entry;
+ struct prestera_storm_control;
+ struct prestera_qos;
++struct prestera_qdisc;
+ 
+ struct prestera_flow_block_binding {
+ 	struct list_head list;
+@@ -205,6 +206,7 @@ struct prestera_port {
+ 	} cached_hw_stats;
+ 	struct prestera_flow_block *flow_block;
+ 	struct prestera_qos *qos;
++	struct prestera_qdisc *qdisc;
+ 
+ 	struct phylink_config phy_config;
+ 	struct phylink *phy_link;
+diff --git a/drivers/net/ethernet/marvell/prestera/prestera_hw.c b/drivers/net/ethernet/marvell/prestera/prestera_hw.c
+index 924d47383969..653cfbbb43b0 100644
+--- a/drivers/net/ethernet/marvell/prestera/prestera_hw.c
++++ b/drivers/net/ethernet/marvell/prestera/prestera_hw.c
+@@ -121,6 +121,10 @@ enum prestera_cmd_type_t {
+ 	PRESTERA_CMD_TYPE_QOS_TRUST_MODE_SET = 0X1302,
+ 	PRESTERA_CMD_TYPE_QOS_DEFAULT_PRIO_SET = 0X1303,
+ 
++	PRESTERA_CMD_TYPE_SCHED_CONFIGURE = 0X1401,
++	PRESTERA_CMD_TYPE_SCHED_DISABLE = 0X1402,
++	PRESTERA_CMD_TYPE_SHAPER_PORT_QUEUE_CONFIGURE = 0X1411,
++	PRESTERA_CMD_TYPE_SHAPER_PORT_QUEUE_DISABLE = 0X1412,
+ 	PRESTERA_CMD_TYPE_CPU_CODE_COUNTERS_GET = 0x2000,
+ 
+ 	PRESTERA_CMD_TYPE_ACK = 0x10000,
+@@ -830,6 +834,24 @@ struct prestera_msg_qos_req {
+ 	u8  dscp[64];
+ };
+ 
++struct prestera_msg_sched_req {
++	struct prestera_msg_cmd cmd;
++	u32 port;
++	u32 dev;
++	u32 __pad;
++	u32 quanta[8];
++	u32 weights[8];
++};
++
++struct prestera_msg_shaper_req {
++	struct prestera_msg_cmd cmd;
++	u32 port;
++	u32 dev;
++	u32 tc;
++	u32 burst;
++	u32 rate;
++};
++
+ static void prestera_hw_build_tests(void)
+ {
+ 	/* check requests */
+@@ -870,6 +892,8 @@ static void prestera_hw_build_tests(void)
+ 	BUILD_BUG_ON(sizeof(struct prestera_msg_mdb_create_req) != 16);
+ 	BUILD_BUG_ON(sizeof(struct prestera_msg_mdb_destroy_req) != 16);
+ 	BUILD_BUG_ON(sizeof(struct prestera_msg_qos_req) != 84);
++	BUILD_BUG_ON(sizeof(struct prestera_msg_sched_req) != 80);
++	BUILD_BUG_ON(sizeof(struct prestera_msg_shaper_req) != 24);
+ 
+ 	/* structure that are part of req/resp fw messages */
+ 	BUILD_BUG_ON(sizeof(struct prestera_msg_acl_action) != 32);
+@@ -2929,3 +2953,56 @@ int prestera_hw_mdb_destroy(struct prestera_mdb_entry *mdb)
+ 
+ 	return fw_send_req(mdb->sw, PRESTERA_CMD_TYPE_MDB_DESTROY, &req);
+ }
++
++int prestera_hw_sched_port_configure(const struct prestera_port *port,
++				     u32 *quanta, u32 *weights)
++{
++	struct prestera_msg_sched_req req = {
++		.port = port->hw_id,
++		.dev = port->dev_id,
++	};
++
++	memcpy(req.quanta, quanta, sizeof(req.quanta));
++	memcpy(req.weights, weights, sizeof(req.weights));
++
++	return fw_send_req(port->sw, PRESTERA_CMD_TYPE_SCHED_CONFIGURE,
++			   &req);
++}
++
++int prestera_hw_sched_port_disable(const struct prestera_port *port)
++{
++	struct prestera_msg_sched_req req = {
++		.port = port->hw_id,
++		.dev = port->dev_id,
++	};
++
++	return fw_send_req(port->sw, PRESTERA_CMD_TYPE_SCHED_DISABLE, &req);
++}
++
++int prestera_hw_shaper_port_queue_configure(const struct prestera_port *port,
++					    u32 tc, u32 rate, u32 burst)
++{
++	struct prestera_msg_shaper_req req = {
++		.port = port->hw_id,
++		.dev = port->dev_id,
++		.rate = rate,
++		.burst = burst,
++		.tc = tc,
++	};
++
++	return fw_send_req(port->sw,
++			   PRESTERA_CMD_TYPE_SHAPER_PORT_QUEUE_CONFIGURE, &req);
++}
++
++int prestera_hw_shaper_port_queue_disable(const struct prestera_port *port,
++					  u32 tc)
++{
++	struct prestera_msg_shaper_req req = {
++		.port = port->hw_id,
++		.dev = port->dev_id,
++		.tc = tc,
++	};
++
++	return fw_send_req(port->sw,
++			   PRESTERA_CMD_TYPE_SHAPER_PORT_QUEUE_DISABLE, &req);
++}
+diff --git a/drivers/net/ethernet/marvell/prestera/prestera_hw.h b/drivers/net/ethernet/marvell/prestera/prestera_hw.h
+index 7481183eb791..98b1d3dc5e62 100644
+--- a/drivers/net/ethernet/marvell/prestera/prestera_hw.h
++++ b/drivers/net/ethernet/marvell/prestera/prestera_hw.h
+@@ -434,4 +434,15 @@ int prestera_hw_port_qos_trust_mode_set(const struct prestera_port *port,
+ int prestera_hw_port_qos_default_prio_set(const struct prestera_port *port,
+ 					  u32 priority);
+ 
++/* QoS Scheduler */
++int prestera_hw_sched_port_configure(const struct prestera_port *port,
++				     u32 *quanta, u32 *weights);
++int prestera_hw_sched_port_disable(const struct prestera_port *port);
++
++/* QoS Shaper */
++int prestera_hw_shaper_port_queue_configure(const struct prestera_port *port,
++					    u32 tc, u32 rate, u32 burst);
++int prestera_hw_shaper_port_queue_disable(const struct prestera_port *port,
++					  u32 tc);
++
+ #endif /* _PRESTERA_HW_H_ */
+diff --git a/drivers/net/ethernet/marvell/prestera/prestera_main.c b/drivers/net/ethernet/marvell/prestera/prestera_main.c
+index 36cae9ce4c18..6c950cb2a07c 100644
+--- a/drivers/net/ethernet/marvell/prestera/prestera_main.c
++++ b/drivers/net/ethernet/marvell/prestera/prestera_main.c
+@@ -29,6 +29,7 @@
+ #include "prestera_counter.h"
+ #include "prestera_switchdev.h"
+ #include "prestera_dcb.h"
++#include "prestera_qdisc.h"
+ 
+ static u8 trap_policer_profile = 1;
+ 
+@@ -158,6 +159,10 @@ static int prestera_setup_tc(struct net_device *dev, enum tc_setup_type type,
+ 	switch (type) {
+ 	case TC_SETUP_BLOCK:
+ 		return prestera_setup_tc_block(port, type_data);
++	case TC_SETUP_QDISC_ETS:
++		return prestera_setup_tc_ets(port, type_data);
++	case TC_SETUP_QDISC_TBF:
++		return prestera_setup_tc_tbf(port, type_data);
+ 	default:
+ 		return -EOPNOTSUPP;
+ 	}
+@@ -1049,6 +1054,10 @@ static int __prestera_ports_alloc(struct prestera_switch *sw)
+ 
+ 		prestera_port_dcb_init(port);
+ 
++		err = prestera_tc_qdisc_init(port);
++		if (err)
++			goto err_state_set;
++
+ 		/* initialize state_mac */
+ 		rwlock_init(&port->state_mac_lock);
+ 
+@@ -1546,6 +1555,7 @@ static void __prestera_ports_free(struct prestera_switch *sw)
+ 		prestera_port_vlan_flush(port, true);
+ 		WARN_ON_ONCE(!list_empty(&port->vlans_list));
+ 		prestera_port_router_leave(port);
++		prestera_tc_qdisc_fini(port);
+ 		prestera_port_dcb_fini(port);
+ 
+ 		list_del(pos);
+diff --git a/drivers/net/ethernet/marvell/prestera/prestera_qdisc.c b/drivers/net/ethernet/marvell/prestera/prestera_qdisc.c
+new file mode 100644
+index 000000000000..bf83a970854a
+--- /dev/null
++++ b/drivers/net/ethernet/marvell/prestera/prestera_qdisc.c
+@@ -0,0 +1,202 @@
++// SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0
++/* Copyright (c) 2019-2021 Marvell International Ltd. All rights reserved */
++
++#include <linux/netlink.h>
++#include <net/flow_offload.h>
++
++#include "prestera.h"
++#include "prestera_hw.h"
++#include "prestera_qdisc.h"
++
++struct prestera_qdisc {
++	u32 root;
++	u32 tbf[IEEE_8021QAZ_MAX_TCS];
++	struct mutex lock;  /* Protects qdisc */
++};
++
++static int
++prestera_qdisc_root_check_params(struct tc_ets_qopt_offload_replace_params *p)
++{
++	if (p->bands != IEEE_8021QAZ_MAX_TCS)
++		return -EOPNOTSUPP;
++
++	return 0;
++}
++
++static int
++prestera_qdisc_root_replace(struct prestera_port *port, u32 handle,
++			    struct tc_ets_qopt_offload_replace_params *params)
++{
++	int err;
++
++	err = prestera_qdisc_root_check_params(params);
++	if (err) {
++		if (port->qdisc->root)
++			goto unoffload;
++		return err;
++	}
++
++	err = prestera_hw_sched_port_configure(port, params->quanta,
++					       params->weights);
++	if (err) {
++		if (port->qdisc->root)
++			goto unoffload;
++		return err;
++	}
++
++	port->qdisc->root = handle;
++
++	return 0;
++unoffload:
++	prestera_hw_sched_port_disable(port);
++	port->qdisc->root = 0;
++	return err;
++}
++
++static void prestera_qdisc_tbf_destroy(struct prestera_port *port, u32 tc)
++{
++	WARN_ON(prestera_hw_shaper_port_queue_disable(port, tc));
++	port->qdisc->tbf[tc] = 0;
++}
++
++static void prestera_qdisc_root_destroy(struct prestera_port *port)
++{
++	u32 tc;
++
++	for (tc = 0; tc < IEEE_8021QAZ_MAX_TCS; tc++)
++		prestera_qdisc_tbf_destroy(port, tc);
++
++	WARN_ON(prestera_hw_sched_port_disable(port));
++	port->qdisc->root = 0;
++}
++
++static u32
++prestera_qdisc_tbf_burst(struct tc_tbf_qopt_offload_replace_params *p)
++{
++	/* burst is configured in units of 4K bytes */
++	return p->max_size / 4096;
++}
++
++static u64
++prestera_qdisc_tbf_rate_kbps(struct tc_tbf_qopt_offload_replace_params *p)
++{
++	/* rate is configured in Kbps */
++	return div_u64(p->rate.rate_bytes_ps, 1000) * 8;
++}
++
++static int prestera_qdisc_tbf_replace(struct prestera_port *port, u32 handle,
++				      u32 tc, void *params)
++{
++	struct tc_tbf_qopt_offload_replace_params *p = params;
++	u32 burst;
++	u32 rate;
++	int err;
++
++	burst = prestera_qdisc_tbf_burst(p);
++	rate = (u32)prestera_qdisc_tbf_rate_kbps(p);
++
++	err = prestera_hw_shaper_port_queue_configure(port, tc, rate, burst);
++	if (err) {
++		if (port->qdisc->tbf[tc])
++			goto unoffload;
++		return err;
++	}
++
++	port->qdisc->tbf[tc] = handle;
++	return 0;
++unoffload:
++	prestera_hw_shaper_port_queue_disable(port, tc);
++	port->qdisc->tbf[tc] = 0;
++	return err;
++}
++
++static int __prestera_setup_tc_ets(struct prestera_port *port,
++				   struct tc_ets_qopt_offload *p)
++{
++	if (p->command == TC_ETS_REPLACE)
++		return prestera_qdisc_root_replace(port, p->handle,
++						   &p->replace_params);
++
++	if (port->qdisc->root != p->handle)
++		return -EOPNOTSUPP;
++
++	switch (p->command) {
++	case TC_ETS_DESTROY:
++		prestera_qdisc_root_destroy(port);
++		return 0;
++	case TC_ETS_STATS:
++		return 0;
++	default:
++		return -EOPNOTSUPP;
++	}
++}
++
++int prestera_setup_tc_ets(struct prestera_port *port,
++			  struct tc_ets_qopt_offload *p)
++{
++	int err;
++
++	mutex_lock(&port->qdisc->lock);
++	err = __prestera_setup_tc_ets(port, p);
++	mutex_unlock(&port->qdisc->lock);
++
++	return err;
++}
++
++static int __prestera_setup_tc_tbf(struct prestera_port *port,
++				   struct tc_tbf_qopt_offload *p)
++{
++	u32 tc = TC_H_MIN(p->parent) - 1;
++
++	if (tc >= IEEE_8021QAZ_MAX_TCS)
++		return -EINVAL;
++
++	if (p->command == TC_TBF_REPLACE)
++		return prestera_qdisc_tbf_replace(port, p->handle, tc,
++						  &p->replace_params);
++
++	if (port->qdisc->tbf[tc] != p->handle)
++		return -EOPNOTSUPP;
++
++	switch (p->command) {
++	case TC_TBF_DESTROY:
++		prestera_qdisc_tbf_destroy(port, tc);
++		return 0;
++	case TC_TBF_STATS:
++		return 0;
++	default:
++		return -EOPNOTSUPP;
++	}
++	return 0;
++}
++
++int prestera_setup_tc_tbf(struct prestera_port *port,
++			  struct tc_tbf_qopt_offload *p)
++{
++	int err;
++
++	mutex_lock(&port->qdisc->lock);
++	err = __prestera_setup_tc_tbf(port, p);
++	mutex_unlock(&port->qdisc->lock);
++
++	return err;
++}
++
++int prestera_tc_qdisc_init(struct prestera_port *port)
++{
++	struct prestera_qdisc *qdisc;
++
++	qdisc = kzalloc(sizeof(*qdisc), GFP_KERNEL);
++	if (!qdisc)
++		return -ENOMEM;
++
++	mutex_init(&qdisc->lock);
++	port->qdisc = qdisc;
++	return 0;
++}
++
++void prestera_tc_qdisc_fini(struct prestera_port *port)
++{
++	mutex_destroy(&port->qdisc->lock);
++	kfree(port->qdisc);
++}
+diff --git a/drivers/net/ethernet/marvell/prestera/prestera_qdisc.h b/drivers/net/ethernet/marvell/prestera/prestera_qdisc.h
+new file mode 100644
+index 000000000000..e9caf4058891
+--- /dev/null
++++ b/drivers/net/ethernet/marvell/prestera/prestera_qdisc.h
+@@ -0,0 +1,20 @@
++/* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
++/* Copyright (c) 2019-2021 Marvell International Ltd. All rights reserved. */
++/* tc qdisc add dev sw1p1 root handle 1: ets bands 8 strict 8 */
++#ifndef _PRESTERA_ETS_H_
++#define _PRESTERA_ETS_H_
++
++#include <linux/types.h>
++#include <net/pkt_cls.h>
++
++struct prestera_port;
++
++int prestera_setup_tc_ets(struct prestera_port *port,
++			  struct tc_ets_qopt_offload *p);
++int prestera_setup_tc_tbf(struct prestera_port *port,
++			  struct tc_tbf_qopt_offload *p);
++
++int prestera_tc_qdisc_init(struct prestera_port *port);
++void prestera_tc_qdisc_fini(struct prestera_port *port);
++
++#endif /* _PRESTERA_ETS_H_ */
+-- 
+2.17.1
+

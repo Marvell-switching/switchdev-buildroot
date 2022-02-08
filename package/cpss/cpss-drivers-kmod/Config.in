@@ -1,0 +1,4 @@
+config BR2_PACKAGE_CPSS_DRIVERS_KMOD
+	bool "cpss-drivers-kmod"
+	help
+	  CPSS Linux kernel modules

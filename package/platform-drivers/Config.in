@@ -1,0 +1,13 @@
+config BR2_PACKAGE_PLATFORM_DRIVERS
+	bool "platform-drivers"
+	help
+	  Marvell's Switchdev platform drivers
+
+if BR2_PACKAGE_PLATFORM_DRIVERS
+
+config BR2_PACKAGE_PLAT_GPIO_I2C
+	bool "gpio-i2c-driver"
+	help
+	  GPIO I2C driver.
+
+endif

@@ -1,0 +1,17 @@
+#!/bin/sh
+
+start() {
+	#update FW date
+        date -s '2020-08-08 05:05:05'
+}
+
+case "$1" in
+  start)
+	start
+	;;
+  *)
+	echo "Usage: $0 {start}"
+	exit 1
+esac
+
+exit $?

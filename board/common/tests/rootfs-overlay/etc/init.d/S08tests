@@ -1,0 +1,6 @@
+#!/bin/sh
+
+set -u
+
+echo 0 > /proc/sys/kernel/hung_task_timeout_secs
+mount -t debugfs none /sys/kernel/debug

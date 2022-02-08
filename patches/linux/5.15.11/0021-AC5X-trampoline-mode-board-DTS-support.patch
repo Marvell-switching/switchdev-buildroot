@@ -1,0 +1,805 @@
+From d27dfd927818bfd75f1210bed55d9a896aaf4d9a Mon Sep 17 00:00:00 2001
+From: Elad Nachman <enachman@marvell.com>
+Date: Tue, 25 Jan 2022 19:28:40 +0200
+Subject: [PATCH 21/40] AC5X trampoline mode board DTS support
+
+Signed-off-by: Elad Nachman <enachman@marvell.com>
+---
+ arch/arm64/boot/dts/marvell/Makefile          |   2 +
+ arch/arm64/boot/dts/marvell/ac5-4gb.dtsi      | 370 ++++++++++++++++++
+ arch/arm64/boot/dts/marvell/ac5.dtsi          |  13 +-
+ .../dts/marvell/ac5_as4564_trampoline.dts     |  94 +++++
+ .../boot/dts/marvell/ac5_db_trampoline.dts    | 258 ++++++++++++
+ 5 files changed, 730 insertions(+), 7 deletions(-)
+ create mode 100644 arch/arm64/boot/dts/marvell/ac5-4gb.dtsi
+ create mode 100644 arch/arm64/boot/dts/marvell/ac5_as4564_trampoline.dts
+ create mode 100644 arch/arm64/boot/dts/marvell/ac5_db_trampoline.dts
+
+diff --git a/arch/arm64/boot/dts/marvell/Makefile b/arch/arm64/boot/dts/marvell/Makefile
+index 680b2b42b5a3..02173e1c29ea 100644
+--- a/arch/arm64/boot/dts/marvell/Makefile
++++ b/arch/arm64/boot/dts/marvell/Makefile
+@@ -2,6 +2,8 @@
+ # Mvebu SoC Family
+ dtb-$(CONFIG_ARCH_MVEBU) += ac5x_db.dtb
+ dtb-$(CONFIG_ARCH_MVEBU) += ac5_db.dtb
++dtb-$(CONFIG_ARCH_MVEBU) += ac5_as4564_trampoline.dtb
++dtb-$(CONFIG_ARCH_MVEBU) += ac5_db_trampoline.dtb
+ dtb-$(CONFIG_ARCH_MVEBU) += ac5_rd.dtb
+ dtb-$(CONFIG_ARCH_MVEBU) += armada-3720-db.dtb
+ dtb-$(CONFIG_ARCH_MVEBU) += armada-3720-espressobin.dtb
+diff --git a/arch/arm64/boot/dts/marvell/ac5-4gb.dtsi b/arch/arm64/boot/dts/marvell/ac5-4gb.dtsi
+new file mode 100644
+index 000000000000..08b598cb0809
+--- /dev/null
++++ b/arch/arm64/boot/dts/marvell/ac5-4gb.dtsi
+@@ -0,0 +1,370 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Device Tree For AC5.
++ *
++ * Copyright (C) 2021 Marvell
++ *
++ */
++
++/dts-v1/;
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/interrupt-controller/arm-gic.h>
++/*#include <dt-bindings/phy/phy-utmi-mvebu.h>*/
++
++/ {
++	model = "Marvell AC5x board";
++	compatible = "marvell,armada3700";
++	interrupt-parent = <&gic>;
++	#address-cells = <2>;
++	#size-cells = <2>;
++
++	aliases {
++		serial0 = &uart0;
++		spiflash0 = &spiflash0;
++	};
++
++	psci {
++		compatible = "arm,psci-0.2";
++		method = "smc";
++	};
++
++	timer {
++		compatible = "arm,armv8-timer";
++		interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>,
++				 <GIC_PPI 8 IRQ_TYPE_LEVEL_HIGH>,
++				 <GIC_PPI 10 IRQ_TYPE_LEVEL_HIGH>,
++				 <GIC_PPI 7 IRQ_TYPE_LEVEL_HIGH>;
++		//clock-frequency = <10020>;
++		//clock-frequency = <110400>;
++		//clock-frequency = <110020>;
++		clock-frequency = <25000000>;
++	};
++
++	pmu {
++		compatible = "arm,armv8-pmuv3";
++		interrupts = <GIC_PPI 12 IRQ_TYPE_LEVEL_HIGH>;
++	};
++
++	soc {
++		compatible = "simple-bus";
++		#address-cells = <2>;
++		#size-cells = <2>;
++		ranges;
++		dma-ranges;
++
++		internal-regs@7f000000 {
++			#address-cells = <1>;
++			#size-cells = <1>;
++			compatible = "simple-bus";
++			/* 16M internal register @ 0x7f00_0000 */
++			ranges = <0x0 0x0 0x7f000000 0x1000000>;
++			dma-coherent;
++
++			uart0: serial@12000 {
++				compatible = "snps,dw-apb-uart";
++				reg = <0x12000 0x100>;
++				reg-shift = <2>;
++				interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>;
++				reg-io-width = <1>;
++				clock-frequency = <328000000>;
++				status = "okay";
++			};
++
++			mdio: mdio@20000 {
++				#address-cells = <1>;
++				#size-cells = <0>;
++				compatible = "marvell,orion-mdio";
++				reg = <0x22004 0x4>;
++				clocks = <&core_clock>;
++				phy0: ethernet-phy@0 {
++					reg = < 0 0 >;
++				};
++			};
++
++			i2c0: i2c@11000{
++				compatible = "marvell,mv78230-i2c";
++				reg = <0x11000 0x20>;
++
++				clocks = <&core_clock>;
++				clock-names = "core";
++				interrupts = <GIC_SPI 87 IRQ_TYPE_LEVEL_HIGH>;
++				clock-frequency=<100000>;
++				status="okay";
++			};
++
++			i2c1: i2c@11100{
++				compatible = "marvell,mv78230-i2c";
++				reg = <0x11100 0x20>;
++
++				clocks = <&core_clock>;
++				clock-names = "core";
++				interrupts = <GIC_SPI 88 IRQ_TYPE_LEVEL_HIGH>;
++				clock-frequency=<100000>;
++				status="okay";
++			};
++		};
++
++		/* Dedicated section for devices behind 32bit controllers so we
++		   can configure specific DMA mapping for them */
++		behind-32bit-controller@7f000000 {
++			compatible = "simple-bus";
++			#address-cells = <0x2>;
++			#size-cells = <0x2>;
++			ranges = <0x0 0x0 0x0 0x7f000000 0x0 0x1000000>;
++			/* Host addresses starts at 0x2000000 */
++			dma-ranges = <0x0 0x0 0x2 0x0 0x1 0x0>;
++			dma-coherent;
++
++			eth0: ethernet@20000 {
++				compatible = "marvell,armada-ac5-neta";
++				reg = <0x0 0x20000 0x0 0x4000>;
++				interrupts = <GIC_SPI 45 IRQ_TYPE_LEVEL_HIGH>;
++				clocks = <&core_clock>;
++				status = "disabled";
++				phy-mode = "sgmii";
++				memory-region = <&reserved>;
++			};
++
++			eth1: ethernet@24000 {
++				compatible = "marvell,armada-ac5-neta";
++				reg = <0x0 0x24000 0x0 0x4000>;
++				interrupts = <GIC_SPI 55 IRQ_TYPE_LEVEL_HIGH>;
++				clocks = <&core_clock>;
++				status = "disabled";
++				phy-mode = "sgmii";
++				memory-region = <&reserved>;
++				fixed-link {
++					speed = <100>;
++					full-duplex;
++				};
++			};
++
++			/* A dummy entry used for chipidea phy init */
++			usb1phy: usbphy {
++				compatible = "usb-nop-xceiv";
++				#phy-cells = <0>;
++			};
++
++			/* USB0 is a host USB */
++			usb0: usb@80000 {
++				compatible = "marvell,ac5-ehci", "marvell,orion-ehci";
++				reg = <0x0 0x80000 0x0 0x500>;
++				interrupts = <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>;
++				memory-region = <&reserved>;
++				status = "okay";
++			};
++
++			/* USB1 is a peripheral USB */
++			usb1: usb@A0000 {
++				reg = <0x0 0xA0000 0x0 0x500>;
++				interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
++				memory-region = <&reserved>;
++				status = "okay";
++			};
++		};
++
++		pcie0: pcie@800a0000 {
++			compatible = "marvell,ac5-pcie", "snps,dw-pcie";
++			reg = <0 0x800a0000 0 0x20000>, <0 0x3fff0000 0 0x10000>;
++			reg-names = "ctrl", "config";
++			#address-cells = <3>;
++			#size-cells = <2>;
++			#interrupt-cells = <1>;
++			device_type = "pci";
++			dma-coherent;
++			bus-range = <0 0xff>;
++			/* ranges for the PCI memory and I/O regions */
++			ranges = <0x82000000 0 0x30000000 0 0x30000000 0 0xfff0000>;
++
++			interrupt-map-mask = <0 0 0 1>;
++			interrupt-map = <0 0 0 1 &gic GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>;
++
++			interrupts = <GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>;
++
++			num-lanes = <1>;
++			status = "disabled";
++
++			clocks = <&core_clock>;
++		};
++
++		core_clock: core_clock@0 {
++			compatible = "fixed-clock";
++			#clock-cells = <0>;
++			clock-frequency = <400000000>;
++		};
++
++		axi_clock: axi_clock@0 {
++			compatible = "fixed-clock";
++			#clock-cells = <0>;
++			clock-frequency = <325000000>;
++		};
++
++		spi_clock: spi_clock@0 {
++			compatible = "fixed-clock";
++			#clock-cells = <0>;
++			clock-frequency = <200000000>;
++		};
++
++		spi@805a0000 {
++			compatible = "marvell,armada-3700-spi";
++			reg = <0x0 0x805a0000 0x0 0x50>;
++			#address-cells = <0x1>;
++			#size-cells = <0x0>;
++			clocks = <&spi_clock>;
++		        interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;
++		        num-cs = <1>;
++			status = "okay";
++
++			spiflash0: spi-flash@0 {
++				compatible = "spi-nor";
++				spi-max-frequency = <50000000>;
++				spi-tx-bus-width = <1>; /* 1-single, 2-dual, 4-quad */
++				spi-rx-bus-width = <1>; /* 1-single, 2-dual, 4-quad */
++				reg = <0>;
++
++				#address-cells = <1>;
++				#size-cells = <1>;
++
++				partition@0 {
++					label = "spi_flash_part0";
++					reg = <0x0 0x800000>;
++				};
++
++				parition@1 {
++					label = "spi_flash_part1";
++					reg = <0x800000 0x700000>;
++				};
++
++				parition@2 {
++					label = "spi_flash_part2";
++					reg = <0xF00000 0x100000>;
++				};
++			};
++		};
++
++		spi@805a8000 {
++			compatible = "marvell,armada-3700-spi";
++			reg = <0x0 0x805a8000 0x0 0x50>;
++			#address-cells = <0x1>;
++			#size-cells = <0x0>;
++			clocks = <&spi_clock>;
++		        interrupts = <GIC_SPI 91 IRQ_TYPE_LEVEL_HIGH>;
++		        num-cs = <1>;
++			status = "disabled";
++		};
++
++		sdhci@805c0000 {
++			compatible = "marvell, ac5-sdhci", "marvell,armada-ap806-sdhci";
++			reg = <0x0 0x805c0000 0x0 0x300>;
++			interrupts = <GIC_SPI 92 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&core_clock>;
++			clock-names = "core";
++			status = "okay";
++			bus-width = <8>;
++			//marvell,xenon-phy-slow-mode;
++			non-removable;
++			mmc-ddr-1_8v;
++			mmc-hs200-1_8v;
++			mmc-hs400-1_8v;
++			memory-region = <&reserved>;
++		};
++
++		nand@805b00 {
++			compatible = "marvell,ac5-nand-controller";
++			reg =  <0x0 0x805b0000 0x0 0x00000054
++				0x0 0x840F8204 0x0 0x00000004
++				0x0 0x80013010 0x0 0x00000020>;
++			#address-cells = <0x1>;
++			#size-cells = <0x0>;
++			interrupts = <GIC_SPI 89 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&core_clock>;
++			/*marvell,system-controller = <0x15>*/
++			status = "okay";
++			nand-timing-mode = <1>;
++
++			nand@0 {
++				reg = <0x0>;
++				label = "main-storage";
++				nand-rb = <0>;
++				nand-ecc-mode = "hw";
++				nand-ecc-strength = <12>;
++				nand-ecc-step-size = <512>;
++			};
++		};
++
++		prestera: pack-processor@0 {
++			compatible = "marvell,armada-ac5-switch", "mervell,prestera";
++			interrupts = <GIC_SPI 0x23 IRQ_TYPE_LEVEL_HIGH>;
++		};
++
++	};
++
++	gic: interrupt-controller@80600000 {
++		compatible = "arm,gic-v3";
++		#interrupt-cells = <3>;
++		interrupt-controller;
++		/*#redistributor-regions = <1>;*/
++		redistributor-stride = <0x0 0x20000>;	// 128kB stride
++		reg = <0x0 0x80600000 0x0 0x10000>, /* GICD */
++			  <0x0 0x80660000 0x0 0x40000>; /* GICR */
++		interrupts = <GIC_PPI 6 IRQ_TYPE_LEVEL_HIGH>;
++	};
++
++	cpus {
++		#address-cells = <2>;
++		#size-cells = <0>;
++
++		cpu-map {
++			cluster0 {
++				core0 {
++					cpu = <&CPU0>;
++				};
++				core1 {
++					cpu = <&CPU1>;
++				};
++			};
++		};
++
++		CPU0:cpu@0 {
++			device_type = "cpu";
++			compatible = "arm,armv8";
++			reg = <0x0 0x0>;
++			enable-method = "psci";
++			next-level-cache = <&L2_0>;
++		};
++
++		CPU1:cpu@1 {
++			device_type = "cpu";
++			compatible = "arm,armv8";
++			reg = <0x0 0x100>;
++			enable-method = "psci";
++			next-level-cache = <&L2_0>;
++		};
++
++		L2_0: l2-cache0 {
++			compatible = "cache";
++		};
++	};
++
++	memory@00000000 {
++		device_type = "memory";
++		reg = <0x2 0x00000000 0x1 0x00000000>;
++		linux,usable-memory = <0x2 0x00000000 0x1 0x00000000>;
++	};
++
++	reserved-memory {
++		#address-cells = <2>;
++		#size-cells = <2>;
++		ranges;
++
++		reserved: buffer@0 {
++			compatible = "shared-dma-pool"; // to be used as a shared pool of DMA buffers for a set of devices
++			no-map;	// No one other than devices registered for that mem, may use this area
++			// reusable - OS can use the memory in this region with the limitation that the device driver(s)
++			//			  owning the region need to be able to reclaim it back.
++			reg = <0x2 0x0 0x0 0x1000000>;
++		};
++	};
++
++};
+diff --git a/arch/arm64/boot/dts/marvell/ac5.dtsi b/arch/arm64/boot/dts/marvell/ac5.dtsi
+index c350b752884c..6ae0f1c3cb99 100644
+--- a/arch/arm64/boot/dts/marvell/ac5.dtsi
++++ b/arch/arm64/boot/dts/marvell/ac5.dtsi
+@@ -293,10 +293,9 @@
+ 			};
+ 		};
+ 
+-		prestera {
+-			compatible = "marvell,armada-ac5-switch";
++		prestera: pack-processor@0 {
++			compatible = "marvell,armada-ac5-switch", "mervell,prestera";
+ 			interrupts = <GIC_SPI 0x23 IRQ_TYPE_LEVEL_HIGH>;
+-			status = "okay";
+ 		};
+ 
+ 	};
+@@ -349,10 +348,10 @@
+ 	};
+ 
+ 	memory@00000000 {
+-		device_type = "memory";
+-		reg = <0x2 0x00000000 0x0 0x40000000>;
+-		linux,usable-memory = <0x2 0x00000000 0x0 0x40000000>;
+-	};
++                device_type = "memory";
++                reg = <0x2 0x00000000 0x0 0x40000000>;
++                // linux,usable-memory = <0x2 0x00000000 0x0 0x80000000>;
++        };
+ 
+ 	reserved-memory {
+ 		#address-cells = <2>;
+diff --git a/arch/arm64/boot/dts/marvell/ac5_as4564_trampoline.dts b/arch/arm64/boot/dts/marvell/ac5_as4564_trampoline.dts
+new file mode 100644
+index 000000000000..e70044d74d7b
+--- /dev/null
++++ b/arch/arm64/boot/dts/marvell/ac5_as4564_trampoline.dts
+@@ -0,0 +1,94 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Device Tree For AC5_db.
++ *
++ * Copyright (C) 2021 Marvell
++ *
++ */
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Device Tree file for Marvell Alleycat 5 development board
++ * This board file supports the B configuration of the board
++ */
++#include "ac5-4gb.dtsi"
++
++/ {
++	sfp25: sfp-25 {
++		compatible = "sff,sfp";
++		i2c-bus = <&i2c0_sfp0>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++	sfp26: sfp-26 {
++		compatible = "sff,sfp";
++		i2c-bus = <&i2c0_sfp1>;
++		maximum-power-milliwatt = <2000>;
++	};
++};
++
++&i2c0 {
++        status = "okay";
++        clock-frequency = <100000>;
++        i2cmux@70 {
++                compatible = "nxp,pca9548";
++                reg = <0x70>;
++                #address-cells = <1>;
++                #size-cells = <0>;
++        i2c-mux-idle-disconnect;
++
++                i2c0_sfp0: i2c@2 {
++                        reg = <2>;
++                        #address-cells = <1>;
++                        #size-cells = <0>;
++                };
++                i2c0_sfp1: i2c@3 {
++                        reg = <3>;
++                        #address-cells = <1>;
++                        #size-cells = <0>;
++                };
++	};
++};
++
++&eth0 {
++	status = "okay";
++	fixed-link {
++		speed = <1000>;
++		full-duplex;
++	};
++};
++
++&eth1 {
++	status = "okay";
++};
++
++&usb1 {
++	compatible = "chipidea,usb2";
++	phys = <&usb1phy>;
++	phy-names = "usb-phy";
++	dr_mode = "peripheral";
++};
++
++&prestera {
++	compatible = "marvell,prestera";
++	status = "okay";
++	reg = <0x0 0x7F900000 0x0 0x40000>;
++	ports {
++		port25 {
++			prestera,port-num = <25>;
++			sfp = <&sfp25>;
++		};
++		port26 {
++			prestera,port-num = <26>;
++			sfp = <&sfp26>;
++		};
++	};
++};
++
++&sfp25 {
++	status = "okay";
++};
++
++&sfp26 {
++	status = "okay";
++};
++
+diff --git a/arch/arm64/boot/dts/marvell/ac5_db_trampoline.dts b/arch/arm64/boot/dts/marvell/ac5_db_trampoline.dts
+new file mode 100644
+index 000000000000..742c172d2238
+--- /dev/null
++++ b/arch/arm64/boot/dts/marvell/ac5_db_trampoline.dts
+@@ -0,0 +1,258 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Device Tree For AC5_db.
++ *
++ * Copyright (C) 2021 Marvell
++ *
++ */
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Device Tree file for Marvell Alleycat 5 development board
++ * This board file supports the B configuration of the board
++ */
++#include "ac5.dtsi"
++
++/ {
++	sfp1: sfp-1 {
++		compatible = "sff,sfp";
++		i2c-bus = <&i2c0_sfp0>;
++		maximum-power-milliwatt = <2000>;
++		los-gpio = <&pca9555_0 8 GPIO_ACTIVE_HIGH>;
++                mod-def0-gpio = <&pca9555_1 0 GPIO_ACTIVE_LOW>;
++                tx-disable-gpio = <&pca9555_0 0 GPIO_ACTIVE_HIGH>;
++
++	};
++
++	sfp2: sfp-2 {
++		compatible = "sff,sfp";
++		i2c-bus = <&i2c0_sfp1>;
++		los-gpio = <&pca9555_0 9 GPIO_ACTIVE_HIGH>;
++                mod-def0-gpio = <&pca9555_1 1 GPIO_ACTIVE_LOW>;
++                tx-disable-gpio = <&pca9555_0 1 GPIO_ACTIVE_HIGH>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++	sfp3: sfp-3 {
++		compatible = "sff,sfp";
++		i2c-bus = <&i2c0_sfp2>;
++		los-gpio = <&pca9555_0 10 GPIO_ACTIVE_HIGH>;
++                mod-def0-gpio = <&pca9555_1 2 GPIO_ACTIVE_LOW>;
++                tx-disable-gpio = <&pca9555_0 2 GPIO_ACTIVE_HIGH>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++	sfp4: sfp-4 {
++		compatible = "sff,sfp";
++		i2c-bus = <&i2c0_sfp3>;
++		los-gpio = <&pca9555_0 11 GPIO_ACTIVE_HIGH>;
++                mod-def0-gpio = <&pca9555_1 3 GPIO_ACTIVE_LOW>;
++                tx-disable-gpio = <&pca9555_0 3 GPIO_ACTIVE_HIGH>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++	sfp5: sfp-5 {
++		compatible = "sff,sfp";
++		i2c-bus = <&i2c0_sfp4>;
++		los-gpio = <&pca9555_0 12 GPIO_ACTIVE_HIGH>;
++                mod-def0-gpio = <&pca9555_1 4 GPIO_ACTIVE_LOW>;
++                tx-disable-gpio = <&pca9555_0 4 GPIO_ACTIVE_HIGH>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++	sfp6: sfp-6 {
++		compatible = "sff,sfp";
++		i2c-bus = <&i2c0_sfp5>;
++		los-gpio = <&pca9555_0 13 GPIO_ACTIVE_HIGH>;
++                mod-def0-gpio = <&pca9555_1 5 GPIO_ACTIVE_LOW>;
++                tx-disable-gpio = <&pca9555_0 5 GPIO_ACTIVE_HIGH>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++	sfp7: sfp-7 {
++		compatible = "sff,sfp";
++		i2c-bus = <&i2c0_sfp6>;
++		los-gpio = <&pca9555_0 14 GPIO_ACTIVE_HIGH>;
++                mod-def0-gpio = <&pca9555_1 6 GPIO_ACTIVE_LOW>;
++                tx-disable-gpio = <&pca9555_0 6 GPIO_ACTIVE_HIGH>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++	sfp8: sfp-8 {
++		compatible = "sff,sfp";
++		i2c-bus = <&i2c0_sfp7>;
++		los-gpio = <&pca9555_0 15 GPIO_ACTIVE_HIGH>;
++                mod-def0-gpio = <&pca9555_1 7 GPIO_ACTIVE_LOW>;
++                tx-disable-gpio = <&pca9555_0 7 GPIO_ACTIVE_HIGH>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++};
++
++&i2c0 {
++        status = "okay";
++        clock-frequency = <100000>;
++        i2cmux@70 {
++                compatible = "nxp,pca9548";
++                reg = <0x70>;
++                #address-cells = <1>;
++                #size-cells = <0>;
++        i2c-mux-idle-disconnect;
++
++                i2c0_sfp0: i2c@0 {
++                        reg = <0>;
++                        #address-cells = <1>;
++                        #size-cells = <0>;
++
++			pca9555_0: pca9555@20 {
++				compatible = "nxp,pca9555";
++				gpio-controller;
++				#gpio-cells = <2>;
++				reg = <0x20>;
++			};
++
++			pca9555_1: pca9555@21 {
++				compatible = "nxp,pca9555";
++				gpio-controller;
++				#gpio-cells = <2>;
++				reg = <0x21>;
++			};
++
++                };
++                i2c0_sfp1: i2c@1 {
++                        reg = <1>;
++                        #address-cells = <1>;
++                        #size-cells = <0>;
++                };
++                i2c0_sfp2: i2c@2 {
++                        reg = <2>;
++                        #address-cells = <1>;
++                        #size-cells = <0>;
++                };
++                i2c0_sfp3: i2c@3 {
++                        reg = <3>;
++                        #address-cells = <1>;
++                        #size-cells = <0>;
++                };
++                i2c0_sfp4: i2c@4 {
++                        reg = <4>;
++                        #address-cells = <1>;
++                        #size-cells = <0>;
++                };
++                i2c0_sfp5: i2c@5 {
++                        reg = <5>;
++                        #address-cells = <1>;
++                        #size-cells = <0>;
++                };
++		i2c0_sfp6: i2c@6 {
++                        reg = <6>;
++                        #address-cells = <1>;
++                        #size-cells = <0>;
++                };
++                i2c0_sfp7: i2c@7 {
++                        reg = <7>;
++                        #address-cells = <1>;
++                        #size-cells = <0>;
++                };
++	};
++};
++
++
++&eth0 {
++	status = "okay";
++	fixed-link {
++		speed = <1000>;
++		full-duplex;
++	};
++};
++
++&eth1 {
++	status = "okay";
++};
++
++&usb1 {
++	compatible = "chipidea,usb2";
++	phys = <&usb1phy>;
++	phy-names = "usb-phy";
++	dr_mode = "peripheral";
++};
++
++&prestera {
++	compatible = "marvell,prestera";
++	status = "okay";
++	reg = <0x0 0x7F900000 0x0 0x40000>;
++	ports {
++		port1 {
++			prestera,port-num = <1>;
++			sfp = <&sfp1>;
++		};
++		port2 {
++			prestera,port-num = <2>;
++			sfp = <&sfp2>;
++		};
++
++		port3 {
++			prestera,port-num = <3>;
++			sfp = <&sfp3>;
++		};
++
++		port4 {
++			prestera,port-num = <4>;
++			sfp = <&sfp4>;
++		};
++
++		port5 {
++			prestera,port-num = <5>;
++			sfp = <&sfp5>;
++		};
++
++		port6 {
++			prestera,port-num = <6>;
++			sfp = <&sfp6>;
++		};
++
++		port7 {
++			prestera,port-num = <7>;
++			sfp = <&sfp7>;
++		};
++
++		port8 {
++			prestera,port-num = <8>;
++			sfp = <&sfp8>;
++		};
++
++	};
++};
++
++&sfp1 {
++	status = "okay";
++};
++
++&sfp2 {
++	status = "okay";
++};
++
++&sfp3 {
++	status = "okay";
++};
++
++&sfp4 {
++	status = "okay";
++};
++
++&sfp5 {
++	status = "okay";
++};
++
++&sfp6 {
++	status = "okay";
++};
++
++&sfp7 {
++	status = "okay";
++};
++
++&sfp8 {
++	status = "okay";
++};
++
++
+-- 
+2.17.1
+

@@ -1,0 +1,112 @@
+From 822f2ef31bf891bf990beab26d111f796c992d78 Mon Sep 17 00:00:00 2001
+From: Taras Chornyi <taras.chornyi@plvision.eu>
+Date: Tue, 10 Nov 2020 15:13:03 +0200
+Subject: [PATCH] ethtool bump version to 5.6
+
+Signed-off-by: Taras Chornyi <taras.chornyi@plvision.eu>
+---
+ .../0001-netlink-fix-build-warnings.patch     | 52 +++++++++++++++++++
+ package/ethtool/ethtool.hash                  |  6 +--
+ package/ethtool/ethtool.mk                    |  9 +++-
+ 3 files changed, 63 insertions(+), 4 deletions(-)
+ create mode 100644 package/ethtool/0001-netlink-fix-build-warnings.patch
+
+diff --git a/package/ethtool/0001-netlink-fix-build-warnings.patch b/package/ethtool/0001-netlink-fix-build-warnings.patch
+new file mode 100644
+index 0000000000..4e9b520d58
+--- /dev/null
++++ b/package/ethtool/0001-netlink-fix-build-warnings.patch
+@@ -0,0 +1,52 @@
++From 93b2d0ef0c2be825e56d1f810fbbfba4800fa831 Mon Sep 17 00:00:00 2001
++From: Michal Kubecek <mkubecek@suse.cz>
++Date: Fri, 29 May 2020 01:21:12 +0200
++Subject: [PATCH] netlink: fix build warnings
++
++Depending on compiler version and options, some of these warnings may
++result in build failure.
++
++- gcc 4.8 wants __KERNEL_DIV_ROUND_UP defined before including ethtool.h
++- avoid pointer arithmetic on void *
++
++Signed-off-by: Michal Kubecek <mkubecek@suse.cz>
++
++[Patch was taken from the linux netdev mailinglist and will be applied in the
++upcoming ethtool release 5.8]
++Signed-off-by: Heiko Thiery <heiko.thiery@gmail.com>
++---
++ netlink/desc-ethtool.c | 2 +-
++ netlink/parser.c       | 2 +-
++ 2 files changed, 2 insertions(+), 2 deletions(-)
++
++diff --git a/netlink/desc-ethtool.c b/netlink/desc-ethtool.c
++index 76c6f13..423479d 100644
++--- a/netlink/desc-ethtool.c
+++++ b/netlink/desc-ethtool.c
++@@ -4,9 +4,9 @@
++  * Descriptions of ethtool netlink messages and attributes for pretty print.
++  */
++ 
+++#include "../internal.h"
++ #include <linux/ethtool_netlink.h>
++ 
++-#include "../internal.h"
++ #include "prettymsg.h"
++ 
++ static const struct pretty_nla_desc __header_desc[] = {
++diff --git a/netlink/parser.c b/netlink/parser.c
++index fff23f2..d790abe 100644
++--- a/netlink/parser.c
+++++ b/netlink/parser.c
++@@ -1016,7 +1016,7 @@ int nl_parser(struct nl_context *nlctx, const struct param_parser *params,
++ 			buff = tmp_buff_find(buffs, parser->group);
++ 		msgbuff = buff ? &buff->msgbuff : &nlsk->msgbuff;
++ 
++-		param_dest = dest ? (dest + parser->dest_offset) : NULL;
+++		param_dest = dest ? ((char *)dest + parser->dest_offset) : NULL;
++ 		ret = parser->handler(nlctx, parser->type, parser->handler_data,
++ 				      msgbuff, param_dest);
++ 		if (ret < 0)
++-- 
++2.20.1
++
+diff --git a/package/ethtool/ethtool.hash b/package/ethtool/ethtool.hash
+index f8ac6c623d..67fe263315 100644
+--- a/package/ethtool/ethtool.hash
++++ b/package/ethtool/ethtool.hash
+@@ -1,5 +1,5 @@
+ # From https://www.kernel.org/pub/software/network/ethtool/sha256sums.asc
+-sha256	f3dac0dbce7066af05fbe92812cc33a042d03fb00a45bcf9959f20455efe24c4	ethtool-5.3.tar.xz
++sha256  ca0f1b526dad5153f0aa0f1eb3c17c31770c75a74f70af622b1a83ae38043995  ethtool-5.6.tar.xz
+ # Locally calculated
+-sha256	8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643	COPYING
+-sha256	5d632934396f90c82dfebe3c9512648bbb6333b406113d0cd331b0e0aa2d34a1	LICENSE
++sha256	8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643  COPYING
++sha256	5d632934396f90c82dfebe3c9512648bbb6333b406113d0cd331b0e0aa2d34a1  LICENSE
+diff --git a/package/ethtool/ethtool.mk b/package/ethtool/ethtool.mk
+index c5f15fcea7..c36268544f 100644
+--- a/package/ethtool/ethtool.mk
++++ b/package/ethtool/ethtool.mk
+@@ -4,7 +4,7 @@
+ #
+ ################################################################################
+ 
+-ETHTOOL_VERSION = 5.3
++ETHTOOL_VERSION = 5.6
+ ETHTOOL_SOURCE = ethtool-$(ETHTOOL_VERSION).tar.xz
+ ETHTOOL_SITE = $(BR2_KERNEL_MIRROR)/software/network/ethtool
+ ETHTOOL_LICENSE = GPL-2.0
+@@ -12,4 +12,11 @@ ETHTOOL_LICENSE_FILES = LICENSE COPYING
+ ETHTOOL_CONF_OPTS = \
+ 	$(if $(BR2_PACKAGE_ETHTOOL_PRETTY_PRINT),--enable-pretty-dump,--disable-pretty-dump)
+ 
++ifeq ($(BR2_PACKAGE_LIBMNL),y)
++ETHTOOL_DEPENDENCIES += host-pkgconf libmnl
++ETHTOOL_CONF_OPTS += --enable-netlink
++else
++ETHTOOL_CONF_OPTS += --disable-netlink
++endif
++
+ $(eval $(autotools-package))
+-- 
+2.17.1
+

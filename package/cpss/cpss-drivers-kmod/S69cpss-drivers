@@ -1,0 +1,56 @@
+#!/bin/sh
+#
+
+module_load() {
+	printf "modprobe $1: "
+	modprobe $1
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
+}
+
+module_unload() {
+	printf "rmmod $1: "
+	rmmod $1
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
+}
+
+start() {
+	echo "Loading cpss-drivers ..."
+	umask 077
+
+	module_load mvIntDrv
+	module_load mvDmaDrv
+	module_load mvMbusDrv
+}
+stop() {
+	echo "Unloading cpss-drivers ..."
+
+	module_unload mvMbusDrv
+	module_unload mvDmaDrv
+	module_unload mvIntDrv
+}
+restart() {
+	stop
+	# Sleep needed for minidlna to restart properly
+	sleep 1
+	start "$@"
+}
+
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  restart|reload)
+	restart
+	;;
+  force-reload)
+	restart -R
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart|force-reload}"
+	exit 1
+esac
+
+exit $?

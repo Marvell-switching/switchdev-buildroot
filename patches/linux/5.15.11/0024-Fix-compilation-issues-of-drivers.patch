@@ -1,0 +1,51 @@
+From 1195488f1a3aebf7deb791e91ca66e947000ccdd Mon Sep 17 00:00:00 2001
+From: Elad Nachman <enachman@marvell.com>
+Date: Wed, 26 Jan 2022 18:54:39 +0200
+Subject: [PATCH 24/40] Fix compilation issues of drivers
+
+Signed-off-by: Elad Nachman <enachman@marvell.com>
+---
+ drivers/net/ethernet/marvell/mvneta.c      | 6 ++++--
+ drivers/pci/controller/dwc/pcie-armada8k.c | 1 +
+ 2 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/marvell/mvneta.c b/drivers/net/ethernet/marvell/mvneta.c
+index dea2be0cacaf..9c1b0a729877 100644
+--- a/drivers/net/ethernet/marvell/mvneta.c
++++ b/drivers/net/ethernet/marvell/mvneta.c
+@@ -3435,7 +3435,7 @@ static int mvneta_txq_sw_init(struct mvneta_port *pp,
+ 		return -ENOMEM;
+ 
+ 	/* Setup XPS mapping */
+-	if (pp->neta_armada3700)
++	if (pp->neta_type == MVNETA_TYPE_3700)
+ 		cpu = 0;
+ 	else if (txq_number > 1)
+ 		cpu = txq->id % num_present_cpus();
+@@ -4224,8 +4224,10 @@ static int mvneta_cpu_online(unsigned int cpu, struct hlist_node *node)
+ 
+ 	/* Armada 3700's per-cpu interrupt for mvneta is broken, all interrupts
+ 	 * are routed to CPU 0, so we don't need all the cpu-hotplug support
++	 * (EladN 26-1-2022 : Verified to be working on AC5x, only relevant
++	 * for Armada 3700)
+ 	 */
+-	if (pp->neta_armada3700)
++	if (pp->neta_type == MVNETA_TYPE_3700)
+ 		return 0;
+ 
+ 	spin_lock(&pp->lock);
+diff --git a/drivers/pci/controller/dwc/pcie-armada8k.c b/drivers/pci/controller/dwc/pcie-armada8k.c
+index 6e2437fdb141..80bbd1244c0a 100644
+--- a/drivers/pci/controller/dwc/pcie-armada8k.c
++++ b/drivers/pci/controller/dwc/pcie-armada8k.c
+@@ -161,6 +161,7 @@ static int armada8k_pcie_host_init(struct pcie_port *pp)
+ {
+ 	u32 reg;
+ 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
++	struct armada8k_pcie *pcie = to_armada8k_pcie(pci);
+ 
+ 	/* Setup Requester-ID to Stream-ID mapping */
+ 	if (pcie->pcie_type == MVPCIE_TYPE_A8K)
+-- 
+2.17.1
+

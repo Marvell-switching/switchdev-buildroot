@@ -1,0 +1,4 @@
+config BR2_PACKAGE_PRESTERA_QA
+	bool "prestera qa required changes"
+	help
+	  Prestera SwitchDev fixups/files/changes needed by QA.

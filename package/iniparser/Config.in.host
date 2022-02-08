@@ -1,0 +1,6 @@
+config BR2_PACKAGE_HOST_INIPARSER
+	bool "host-iniparser"
+	help
+	  This modules offers parsing of ini files from the C level.
+
+	  https://github.com/ndevilla/iniparser

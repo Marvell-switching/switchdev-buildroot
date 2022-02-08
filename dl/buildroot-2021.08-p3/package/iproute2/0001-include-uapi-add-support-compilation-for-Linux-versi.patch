@@ -1,0 +1,29 @@
+From af985223f72788e4ecf9fba48f2cc60d37b1faea Mon Sep 17 00:00:00 2001
+From: Vadym Kochan <vadym.kochan@plvision.eu>
+Date: Fri, 25 Oct 2019 15:52:59 +0300
+Subject: [PATCH] include/uapi: add support compilation for Linux version < 3.4
+
+Signed-off-by: Vadym Kochan <vadym.kochan@plvision.eu>
+---
+ include/uapi/linux/sysinfo.h | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/include/uapi/linux/sysinfo.h b/include/uapi/linux/sysinfo.h
+index 435d5c2..d6ce0e4 100644
+--- a/include/uapi/linux/sysinfo.h
++++ b/include/uapi/linux/sysinfo.h
+@@ -4,6 +4,11 @@
+ 
+ #include <linux/types.h>
+ 
++#ifndef __kernel_long_t
++typedef long		__kernel_long_t;
++typedef unsigned long	__kernel_ulong_t;
++#endif
++
+ #define SI_LOAD_SHIFT	16
+ struct sysinfo {
+ 	__kernel_long_t uptime;		/* Seconds since boot */
+-- 
+2.17.1
+

@@ -1,0 +1,25 @@
+From 524bc028e7e0ffa812bd92a1b2fe64ddc2c3c201 Mon Sep 17 00:00:00 2001
+From: Elad Nachman <enachman@marvell.com>
+Date: Tue, 25 Jan 2022 15:45:54 +0200
+Subject: [PATCH 07/40] bridge: Fix userspace stp state
+
+Signed-off-by: Elad Nachman <enachman@marvell.com>
+---
+ net/bridge/br_stp_if.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/net/bridge/br_stp_if.c b/net/bridge/br_stp_if.c
+index ba55851fe132..1d6db59341ae 100644
+--- a/net/bridge/br_stp_if.c
++++ b/net/bridge/br_stp_if.c
+@@ -187,6 +187,7 @@ static void br_stp_stop(struct net_bridge *br)
+ 		if (err)
+ 			br_err(br, "failed to stop userspace STP (%d)\n", err);
+ 
++		br->stp_enabled = BR_NO_STP;
+ 		/* To start timers on any ports left in blocking */
+ 		spin_lock_bh(&br->lock);
+ 		br_port_state_selection(br);
+-- 
+2.17.1
+

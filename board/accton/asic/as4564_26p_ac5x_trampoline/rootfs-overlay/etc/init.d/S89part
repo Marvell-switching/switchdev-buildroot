@@ -1,0 +1,48 @@
+#!/bin/sh
+
+start() {
+	fsck -p /dev/mmcblk0p1
+	mount /dev/mmcblk0p1 /mnt
+	if [ -f /mnt/etc/mvsw/mvsw_platform.xml ]
+	then
+		mv /etc/mvsw/mvsw_platform.xml /etc/mvsw/mvsw_platform.ro
+		cp /mnt/etc/mvsw/mvsw_platform.xml /etc/mvsw/
+		mkdir /mnt/var
+		mkdir /mnt/var/log
+		rm /var/log
+		ln -s /mnt/var/log /var/log
+		md5sum /mnt/etc/mvsw/mvsw_platform.xml | awk '{print $1}' > /tmp/xml.md5
+		if diff -w -q /tmp/xml.md5 /mnt/etc/mvsw/mvsw_platform.md5 | grep -q "differ"; then
+			date >> /var/log/md5.log
+			echo "XML MD5 check failed. Calculated and original SUM :" >> /var/log/md5.log
+			cat /tmp/xml.md5 >> /var/log/md5.log
+			cat /mnt/etc/mvsw/mvsw_platform.md5 >> /var/log/md5.log
+		fi
+		start-stop-daemon -S --exec /etc/init.d/track_xml.sh &
+
+	fi
+
+}
+
+stop() {
+	rm /var/log
+	ln -s /tmp /var/log
+	sync
+	umount /dev/mmcblk0p1
+}
+
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  *)
+        echo "Usage: $0 {start|stop}"
+        exit 1
+esac
+
+exit $?
+

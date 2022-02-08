@@ -1,0 +1,25 @@
+From d6bbe0e42185c47e9438fa2b88182490dbf97b54 Mon Sep 17 00:00:00 2001
+From: Elad Nachman <enachman@marvell.com>
+Date: Tue, 25 Jan 2022 15:38:41 +0200
+Subject: [PATCH 03/40]  Import Yuval Shaia commit from Kernel 5.4 - dts: Add 
+ ac5x to Makefile
+
+Signed-off-by: Elad Nachman <enachman@marvell.com>
+---
+ arch/arm64/boot/dts/marvell/Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/marvell/Makefile b/arch/arm64/boot/dts/marvell/Makefile
+index f569d0a7ab42..680b2b42b5a3 100644
+--- a/arch/arm64/boot/dts/marvell/Makefile
++++ b/arch/arm64/boot/dts/marvell/Makefile
+@@ -1,5 +1,6 @@
+ # SPDX-License-Identifier: GPL-2.0
+ # Mvebu SoC Family
++dtb-$(CONFIG_ARCH_MVEBU) += ac5x_db.dtb
+ dtb-$(CONFIG_ARCH_MVEBU) += ac5_db.dtb
+ dtb-$(CONFIG_ARCH_MVEBU) += ac5_rd.dtb
+ dtb-$(CONFIG_ARCH_MVEBU) += armada-3720-db.dtb
+-- 
+2.17.1
+

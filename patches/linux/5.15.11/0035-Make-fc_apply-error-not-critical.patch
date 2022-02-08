@@ -1,0 +1,46 @@
+From a500198e5fb55d4a8a3ba700937225db7305c160 Mon Sep 17 00:00:00 2001
+From: Yevhen Orlov <yevhen.orlov@plvision.eu>
+Date: Tue, 25 Jan 2022 02:10:44 +0200
+Subject: [PATCH 35/40] Make fc_apply error not critical
+
+Now we can mark route as offload_failed inside fc_apply.
+So no need to return error, if fc_apply failed
+
+JIRA: SWITCHDEV-2534
+Signed-off-by: Yevhen Orlov <yevhen.orlov@plvision.eu>
+Change-Id: Icfda73ceeebbbb8888888f1cc19fb83294874602
+---
+ drivers/net/ethernet/marvell/prestera/prestera_router.c | 8 ++------
+ 1 file changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/net/ethernet/marvell/prestera/prestera_router.c b/drivers/net/ethernet/marvell/prestera/prestera_router.c
+index c5516b135a2e..b4923ba72b29 100644
+--- a/drivers/net/ethernet/marvell/prestera/prestera_router.c
++++ b/drivers/net/ethernet/marvell/prestera/prestera_router.c
+@@ -1431,10 +1431,8 @@ mvsw_pr_k_arb_fib_evt(struct prestera_switch *sw,
+ 		if (!tfib_cache && bfib_cache) {
+ 			bfib_cache->reachable = true;
+ 			err = __mvsw_pr_k_arb_fc_apply(sw, bfib_cache);
+-			if (err) {
++			if (err)
+ 				MVSW_LOG_ERROR("Applying fib_cache btm failed");
+-				return -ENOENT;
+-			}
+ 		}
+ 
+ 		mvsw_pr_kern_fib_cache_destroy(sw, fib_cache);
+@@ -1463,10 +1461,8 @@ mvsw_pr_k_arb_fib_evt(struct prestera_switch *sw,
+ 		}
+ 
+ 		err = __mvsw_pr_k_arb_fc_apply(sw, fib_cache);
+-		if (err) {
++		if (err)
+ 			MVSW_LOG_ERROR("Applying fib_cache failed");
+-			return -ENOENT;
+-		}
+ 	}
+ 
+ 	/* Update all neighs to resolve overlapped and apply related */
+-- 
+2.17.1
+

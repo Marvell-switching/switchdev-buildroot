@@ -1,0 +1,27 @@
+From 825745df4a4f7eb57eb0214b89064fb66b5249a7 Mon Sep 17 00:00:00 2001
+From: Elad Nachman <enachman@marvell.com>
+Date: Tue, 25 Jan 2022 19:20:15 +0200
+Subject: [PATCH 18/40] bridge: allow offloading of isolated ports
+
+Signed-off-by: Elad Nachman <enachman@marvell.com>
+---
+ net/bridge/br_switchdev.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/net/bridge/br_switchdev.c b/net/bridge/br_switchdev.c
+index 6bf518d78f02..898257153883 100644
+--- a/net/bridge/br_switchdev.c
++++ b/net/bridge/br_switchdev.c
+@@ -71,7 +71,8 @@ bool nbp_switchdev_allowed_egress(const struct net_bridge_port *p,
+ 
+ /* Flags that can be offloaded to hardware */
+ #define BR_PORT_FLAGS_HW_OFFLOAD (BR_LEARNING | BR_FLOOD | \
+-				  BR_MCAST_FLOOD | BR_BCAST_FLOOD)
++				  BR_MCAST_FLOOD | BR_BCAST_FLOOD | \
++				  BR_ISOLATED)
+ 
+ int br_switchdev_set_port_flag(struct net_bridge_port *p,
+ 			       unsigned long flags,
+-- 
+2.17.1
+

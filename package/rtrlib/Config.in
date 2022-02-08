@@ -1,0 +1,13 @@
+config BR2_PACKAGE_RTRLIB
+	bool "rtrlib"
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	depends on BR2_TOOLCHAIN_HAS_SSP
+	help
+	  An open-source C implementation of the RPKI/Router Protocol client.
+
+	  http://rtrlib.realmv6.org
+
+comment "rtrlib requires toolchain w/ threads, SSP"
+	  depends on !BR2_TOOLCHAIN_HAS_THREADS || \
+		  !BR2_TOOLCHAIN_HAS_SSP
+

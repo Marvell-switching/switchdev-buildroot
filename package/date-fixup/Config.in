@@ -1,0 +1,4 @@
+config BR2_PACKAGE_DATE_FIXUP
+	bool "date-fixup"
+	help
+	  Date fixup init script.

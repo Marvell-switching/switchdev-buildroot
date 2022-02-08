@@ -1,0 +1,18 @@
+config BR2_PACKAGE_CPSS
+	bool "cpss"
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	help
+	  Marvell's Prestera SDK
+
+config BR2_PACKAGE_CPSS_USE_CUSTOM_VERSION
+	bool "use cpss from custom git version"
+
+config BR2_PACKAGE_CPSS_CUSTOM_VERSION
+	string "pull cpss from specified git commit"
+
+if BR2_PACKAGE_CPSS
+
+source "$BR2_EXTERNAL_PRESTERA_PATH/package/cpss/cpss-agent/Config.in"
+source "$BR2_EXTERNAL_PRESTERA_PATH/package/cpss/cpss-drivers-kmod/Config.in"
+
+endif

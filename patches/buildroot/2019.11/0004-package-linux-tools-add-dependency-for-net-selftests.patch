@@ -1,0 +1,43 @@
+From e288548d9badf49046b6d4ad116c000d06ca8d6c Mon Sep 17 00:00:00 2001
+From: Vadym Kochan <vadym.kochan@plvision.eu>
+Date: Wed, 25 Mar 2020 16:02:23 +0200
+Subject: [PATCH] package/linux-tools: add dependency for net selftests
+
+Linux net selftests (reuseport_bpf_numa.c) requires numa.h header which
+is provided by numactl package. Otherwise net tests are failed to
+install.
+
+Signed-off-by: Vadym Kochan <vadym.kochan@plvision.eu>
+---
+ package/linux-tools/Config.in                  | 1 +
+ package/linux-tools/linux-tool-selftests.mk.in | 2 +-
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/package/linux-tools/Config.in b/package/linux-tools/Config.in
+index ab8cc38..4bbb3b3 100644
+--- a/package/linux-tools/Config.in
++++ b/package/linux-tools/Config.in
+@@ -91,6 +91,7 @@ config BR2_PACKAGE_LINUX_TOOLS_SELFTESTS
+ 	select BR2_PACKAGE_KMOD_TOOLS # runtime (modprobe -n)
+ 	select BR2_PACKAGE_POPT
+ 	select BR2_PACKAGE_LIBCAP_NG
++	select BR2_PACKAGE_NUMACTL # required by net tests
+ 	select BR2_PACKAGE_UTIL_LINUX
+ 	select BR2_PACKAGE_UTIL_LINUX_SCHEDUTILS # runtime (taskset)
+ 	help
+diff --git a/package/linux-tools/linux-tool-selftests.mk.in b/package/linux-tools/linux-tool-selftests.mk.in
+index c4e5bf0..48849c5 100644
+--- a/package/linux-tools/linux-tool-selftests.mk.in
++++ b/package/linux-tools/linux-tool-selftests.mk.in
+@@ -16,7 +16,7 @@ SELFTESTS_ARCH=$(KERNEL_ARCH)
+ endif
+ endif
+ 
+-SELFTESTS_DEPENDENCIES = libcap-ng popt
++SELFTESTS_DEPENDENCIES = libcap-ng popt numactl
+ 
+ SELFTESTS_MAKE_FLAGS = \
+ 	$(LINUX_MAKE_FLAGS) \
+-- 
+2.17.1
+

@@ -1,0 +1,39 @@
+From 729651e59da3e01b2d10ab66a41d559dff346a87 Mon Sep 17 00:00:00 2001
+From: Vadym Kochan <vadym.kochan@plvision.eu>
+Date: Fri, 12 Jun 2020 10:14:43 +0300
+Subject: [PATCH] package/keepalived: make suport for Linux headers >= 3.2
+
+There are some toolchains (Marvell's one for a38x platform) which
+is compiled with Linux 3.2 heaers, so we need to add support for this
+toolchain.
+
+Signed-off-by: Vadym Kochan <vadym.kochan@plvision.eu>
+---
+ package/keepalived/Config.in | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/package/keepalived/Config.in b/package/keepalived/Config.in
+index c718215..223ed5a 100644
+--- a/package/keepalived/Config.in
++++ b/package/keepalived/Config.in
+@@ -2,7 +2,7 @@ config BR2_PACKAGE_KEEPALIVED
+ 	bool "keepalived"
+ 	depends on BR2_USE_MMU
+ 	depends on !BR2_STATIC_LIBS # uses libdl
+-	depends on BR2_TOOLCHAIN_HEADERS_AT_LEAST_3_4
++	depends on BR2_TOOLCHAIN_HEADERS_AT_LEAST_3_2
+ 	select BR2_PACKAGE_OPENSSL
+ 	help
+ 	  The main goal of the keepalived project is to add a strong &
+@@ -15,6 +15,6 @@ config BR2_PACKAGE_KEEPALIVED
+ 
+ 	  http://www.keepalived.org/
+ 
+-comment "keepalived needs a toolchain w/ dynamic library, headers >= 3.4"
++comment "keepalived needs a toolchain w/ dynamic library, headers >= 3.2"
+ 	depends on BR2_USE_MMU
+-	depends on BR2_STATIC_LIBS || !BR2_TOOLCHAIN_HEADERS_AT_LEAST_3_4
++	depends on BR2_STATIC_LIBS || !BR2_TOOLCHAIN_HEADERS_AT_LEAST_3_2
+-- 
+2.17.1
+

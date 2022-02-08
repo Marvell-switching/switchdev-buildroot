@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# nand
+BOOT_MODE=0x4a
+
+if [ "${1}" == "pci" ]; then
+    BOOT_MODE=0x2c
+elif [ "${1}" == "nand" ]; then
+    BOOT_MODE=0x4a
+elif [ -n "${1}" ]; then
+    echo "error: invalid boot mode. Please use 'pci' or 'nand' (default) as value"
+    exit 1
+fi
+
+# set the boot vector
+i2cset -fy 2 0x41 0x11 ${BOOT_MODE}
+
+# first set everything to normal mode
+i2cset -fy 2 0x41 0x10 0xff
+
+# do the actual reset
+i2cset -fy 2 0x41 0x10 0x41

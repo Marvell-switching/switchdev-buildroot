@@ -1,0 +1,25 @@
+From 27ff3f7f9990542f19b44e983dcc84c51d5a1ef5 Mon Sep 17 00:00:00 2001
+From: Elad Nachman <enachman@marvell.com>
+Date: Tue, 25 Jan 2022 15:37:46 +0200
+Subject: [PATCH 02/40] Import kernel 5.4 patch by Yulia Weisman - Add 
+ pci_enable by default to AC5 Com Express
+
+Signed-off-by: Elad Nachman <enachman@marvell.com>
+---
+ arch/arm64/boot/dts/marvell/ac5_comexpress.dts | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/marvell/ac5_comexpress.dts b/arch/arm64/boot/dts/marvell/ac5_comexpress.dts
+index 3e34ffa1ba2e..651eaae84aeb 100644
+--- a/arch/arm64/boot/dts/marvell/ac5_comexpress.dts
++++ b/arch/arm64/boot/dts/marvell/ac5_comexpress.dts
+@@ -26,3 +26,6 @@
+ 	dr_mode = "peripheral";
+ };
+ 
++&pcie0 {
++	status = "okay";
++};
+-- 
+2.17.1
+

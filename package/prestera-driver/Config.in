@@ -1,0 +1,9 @@
+config BR2_PACKAGE_PRESTERA_DRIVER
+	bool "prestera-driver"
+	help
+	  Marvell's Prestera Switchdev kernel module
+
+config BR2_PACKAGE_PRESTERA_DRIVER_IPC_TRAMPOLINE
+	bool "prestera-driver-ipc-trampoline"
+	help
+	  Marvell's Prestera Switchdev kernel module

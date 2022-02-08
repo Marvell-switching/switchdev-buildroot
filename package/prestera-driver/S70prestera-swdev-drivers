@@ -1,0 +1,68 @@
+#!/bin/sh
+#
+
+module_load() {
+	local modname
+
+	modname=$1
+	shift
+
+	printf "modprobe $modname: "
+
+	modprobe $modname $@
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
+}
+
+module_unload() {
+	printf "rmmod $1: "
+	rmmod $1
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
+}
+
+start() {
+	echo "Loading Prestera Switchdev drivers ..."
+	umask 077
+
+	if [[ ! -z $(find /lib/modules -name "prestera_shm.ko" -print) ]]; then
+		module_load prestera_shm
+	else
+		module_load prestera_pci
+	fi
+}
+
+stop() {
+	echo "Unloading Prestera Switchdev drivers ..."
+
+	if [[ ! -z $(find /lib/modules -name "prestera_shm.ko" -print) ]]; then
+		module_unload prestera_shm
+	else
+		module_unload prestera_pci
+	fi
+	module_unload prestera
+}
+
+restart() {
+	stop
+	sleep 1
+	start "$@"
+}
+
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  restart|reload)
+	restart
+	;;
+  force-reload)
+	restart -R
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart|force-reload}"
+	exit 1
+esac
+
+exit $?

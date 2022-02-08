@@ -1,0 +1,30 @@
+From 65dcf5971a8402bd1eb764eda5add77e0e733f2f Mon Sep 17 00:00:00 2001
+From: Vadym Kochan <vadym.kochan@plvision.eu>
+Date: Fri, 16 Oct 2020 14:18:53 +0300
+Subject: [PATCH] toolchain: toolchain-wrapper: unset C{,PLUS}_INC_PATH
+
+Guix system uses these variables to point to system headers but
+it also causes mess with the cross-toolchain which also considers them.
+
+Signed-off-by: Vadym Kochan <vadym.kochan@plvision.eu>
+---
+ toolchain/toolchain-wrapper.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/toolchain/toolchain-wrapper.c b/toolchain/toolchain-wrapper.c
+index b7705a4..bd520d5 100644
+--- a/toolchain/toolchain-wrapper.c
++++ b/toolchain/toolchain-wrapper.c
+@@ -517,6 +517,9 @@ int main(int argc, char **argv)
+ 		fprintf(stderr, "\n");
+ 	}
+ 
++	unsetenv("C_INCLUDE_PATH");
++	unsetenv("CPLUS_INCLUDE_PATH");
++
+ #ifdef BR_CCACHE_HASH
+ 	/* Allow compilercheck to be overridden through the environment */
+ 	if (setenv("CCACHE_COMPILERCHECK", "string:" BR_CCACHE_HASH, 0)) {
+-- 
+2.28.0
+

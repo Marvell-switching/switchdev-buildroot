@@ -1,0 +1,13 @@
+config BR2_PACKAGE_MSTPD
+	bool "mstpd"
+	depends on BR2_PACKAGE_BASH # init
+	help
+	  Multiple Spanning Tree Protocol Daemon
+
+	  MSTPD is an open source user-space daemon licensed under GPLv2.
+
+	  https://github.com/mstpd/mstpd
+
+comment "mstpd requires bash"
+	depends on !BR2_PACKAGE_BASH
+

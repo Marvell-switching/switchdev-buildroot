@@ -1,0 +1,130 @@
+From 53bc335bd0b9bdb6b7cae54e15f346a184af99dc Mon Sep 17 00:00:00 2001
+From: Serhiy Boiko <serhiy.boiko@plvision.eu>
+Date: Thu, 27 Jan 2022 14:46:19 +0200
+Subject: [PATCH 39/40] Add support for tbf statistics
+
+JIRA: SWITCHDEV-000
+
+Signed-off-by: Serhiy Boiko <serhiy.boiko@plvision.eu>
+Change-Id: I8d8f846e95a6103301dec7d67e9159b5871c754a
+---
+ .../ethernet/marvell/prestera/prestera_hw.c   | 34 +++++++++++++++++++
+ .../ethernet/marvell/prestera/prestera_hw.h   |  3 ++
+ .../marvell/prestera/prestera_qdisc.c         | 18 +++++++++-
+ 3 files changed, 54 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/marvell/prestera/prestera_hw.c b/drivers/net/ethernet/marvell/prestera/prestera_hw.c
+index 653cfbbb43b0..aad23b43e07d 100644
+--- a/drivers/net/ethernet/marvell/prestera/prestera_hw.c
++++ b/drivers/net/ethernet/marvell/prestera/prestera_hw.c
+@@ -125,6 +125,8 @@ enum prestera_cmd_type_t {
+ 	PRESTERA_CMD_TYPE_SCHED_DISABLE = 0X1402,
+ 	PRESTERA_CMD_TYPE_SHAPER_PORT_QUEUE_CONFIGURE = 0X1411,
+ 	PRESTERA_CMD_TYPE_SHAPER_PORT_QUEUE_DISABLE = 0X1412,
++	PRESTERA_CMD_TYPE_PORT_QUEUE_STATS_GET = 0X1413,
++
+ 	PRESTERA_CMD_TYPE_CPU_CODE_COUNTERS_GET = 0x2000,
+ 
+ 	PRESTERA_CMD_TYPE_ACK = 0x10000,
+@@ -852,6 +854,13 @@ struct prestera_msg_shaper_req {
+ 	u32 rate;
+ };
+ 
++struct prestera_msg_shaper_stats_resp {
++	struct prestera_msg_ret ret;
++	u64 pkts;
++	u64 bytes;
++	u64 drops;
++};
++
+ static void prestera_hw_build_tests(void)
+ {
+ 	/* check requests */
+@@ -921,6 +930,7 @@ static void prestera_hw_build_tests(void)
+ 	BUILD_BUG_ON(sizeof(struct prestera_msg_nh_grp_resp) != 12);
+ 	BUILD_BUG_ON(sizeof(struct prestera_msg_vr_resp) != 12);
+ 	BUILD_BUG_ON(sizeof(struct prestera_msg_flood_domain_create_resp) != 12);
++	BUILD_BUG_ON(sizeof(struct prestera_msg_shaper_stats_resp) != 32);
+ 
+ 	/* check events */
+ 	BUILD_BUG_ON(sizeof(struct prestera_msg_event_port) != 20);
+@@ -3006,3 +3016,27 @@ int prestera_hw_shaper_port_queue_disable(const struct prestera_port *port,
+ 	return fw_send_req(port->sw,
+ 			   PRESTERA_CMD_TYPE_SHAPER_PORT_QUEUE_DISABLE, &req);
+ }
++
++int prestera_hw_port_queue_stats_get(const struct prestera_port *port,
++				     u8 tc, u64 *pkts, u64 *bytes,
++				     u64 *drops)
++{
++	struct prestera_msg_shaper_stats_resp resp;
++	struct prestera_msg_shaper_req req = {
++		.port = port->hw_id,
++		.dev = port->dev_id,
++		.tc = tc,
++	};
++	int err;
++
++	err = fw_send_req_resp(port->sw, PRESTERA_CMD_TYPE_PORT_QUEUE_STATS_GET,
++			       &req, &resp);
++	if (err)
++		return err;
++
++	*pkts = resp.pkts;
++	*bytes = resp.bytes;
++	*drops = resp.drops;
++
++	return 0;
++}
+diff --git a/drivers/net/ethernet/marvell/prestera/prestera_hw.h b/drivers/net/ethernet/marvell/prestera/prestera_hw.h
+index 98b1d3dc5e62..3de3b917dcdb 100644
+--- a/drivers/net/ethernet/marvell/prestera/prestera_hw.h
++++ b/drivers/net/ethernet/marvell/prestera/prestera_hw.h
+@@ -444,5 +444,8 @@ int prestera_hw_shaper_port_queue_configure(const struct prestera_port *port,
+ 					    u32 tc, u32 rate, u32 burst);
+ int prestera_hw_shaper_port_queue_disable(const struct prestera_port *port,
+ 					  u32 tc);
++int prestera_hw_port_queue_stats_get(const struct prestera_port *port,
++				     u8 tc, u64 *pkts, u64 *bytes,
++				     u64 *drops);
+ 
+ #endif /* _PRESTERA_HW_H_ */
+diff --git a/drivers/net/ethernet/marvell/prestera/prestera_qdisc.c b/drivers/net/ethernet/marvell/prestera/prestera_qdisc.c
+index bf83a970854a..79a42bf6c1f8 100644
+--- a/drivers/net/ethernet/marvell/prestera/prestera_qdisc.c
++++ b/drivers/net/ethernet/marvell/prestera/prestera_qdisc.c
+@@ -110,6 +110,22 @@ static int prestera_qdisc_tbf_replace(struct prestera_port *port, u32 handle,
+ 	return err;
+ }
+ 
++static int prestera_qdisc_stats_get(struct prestera_port *port, u8 tc,
++				    struct tc_qopt_offload_stats *stats_ptr)
++{
++	u64 pkts, bytes, drops;
++	int err;
++
++	err = prestera_hw_port_queue_stats_get(port, tc, &pkts, &bytes, &drops);
++	if (err)
++		return 0;  /* it is okay to fail here */
++
++	_bstats_update(stats_ptr->bstats, bytes, pkts);
++	stats_ptr->qstats->drops += drops;
++
++	return 0;
++}
++
+ static int __prestera_setup_tc_ets(struct prestera_port *port,
+ 				   struct tc_ets_qopt_offload *p)
+ {
+@@ -163,7 +179,7 @@ static int __prestera_setup_tc_tbf(struct prestera_port *port,
+ 		prestera_qdisc_tbf_destroy(port, tc);
+ 		return 0;
+ 	case TC_TBF_STATS:
+-		return 0;
++		return prestera_qdisc_stats_get(port, tc, &p->stats);
+ 	default:
+ 		return -EOPNOTSUPP;
+ 	}
+-- 
+2.17.1
+

@@ -1,0 +1,4 @@
+config BR2_PACKAGE_PRESTERA_UTILS
+	bool "prestera utils"
+	help
+	  Various prestera switch utils

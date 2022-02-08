@@ -1,0 +1,3 @@
+# Added dynamic switch id formatting to drop the zero in the beginning ( e.g 'sw1p1' vs 'sw01p1' )
+SUBSYSTEM=="net", ACTION=="add", ATTR{phys_switch_id}=="[0-9][0-9]", ATTR{phys_port_name}!="p[0-9]*", PROGRAM="/bin/sh -c 'printf %1d $attr{phys_switch_id}'", NAME="sw%cp$attr{phys_port_name}"
+SUBSYSTEM=="net", ACTION=="add", ATTR{phys_switch_id}=="[0-9][0-9]", ATTR{phys_port_name}=="p[0-9]*", PROGRAM="/bin/sh -c 'printf %1d $attr{phys_switch_id}'", NAME="sw%c$attr{phys_port_name}"

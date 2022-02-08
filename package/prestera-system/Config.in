@@ -1,0 +1,5 @@
+config BR2_PACKAGE_PRESTERA_SYSTEM
+	bool "Prestera userspace init, setup, etc"
+	depends on BR2_PACKAGE_HAS_UDEV
+	help
+	  Prestera user space configs, setup, etc.

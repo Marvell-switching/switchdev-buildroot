@@ -1,0 +1,54 @@
+#!/bin/sh
+
+set -u
+
+PCI_MASTER_ID=7
+AMB3_SLAVE_ID=1
+DRAM_SLAVE_ID=12
+
+IPC_BASE=0xf6000000
+IPC_REMAP=0x212000000
+IPC_SIZE=0x800000
+
+MG0_BASE=0xf6800000
+MG0_SIZE=0x800000
+MG0_REMAP=0x7f900000
+
+# $1 - master idx
+# $2 - slave idx
+# $3 - base
+# $4 - remap
+# $5 - size
+addr_dec_config() {
+    local master_idx=$1
+    local slave_idx=$2
+    local base=$3
+    local remap=$4
+    local size=$5
+    local offset=$((0x80400000 + 0x00010000 * master_idx + 0x18 * slave_idx))
+    local enable=0
+    local attrs=0
+
+    attrs=$((size >> 32))
+    attrs=$((attrs & 0xffff0000))
+    attrs=$((attrs | (slave_idx << 1)))
+
+    devmem $((offset+0x100)) w $attrs
+    devmem $((offset+0x104)) w $(((size>>16)-1))
+    devmem $((offset+0x108)) w 0
+    devmem $((offset+0x10c)) w $((base>>16))
+    devmem $((offset+0x110)) w $((remap>>16))
+    devmem $((offset+0x114)) w 0x102FCFF3 
+    enable=$(devmem $((offset+0x100)))
+    devmem $((offset+0x100)) w $((enable|1))
+}
+
+# reconfigure BAR0,2
+devmem 0x800A0010 w 0xc000000c
+devmem 0x800A0018 w 0xc080000c
+devmem 0x800A4018 w 0xffffff
+
+addr_dec_config $PCI_MASTER_ID $DRAM_SLAVE_ID $IPC_BASE $IPC_REMAP $IPC_SIZE
+addr_dec_config $PCI_MASTER_ID $AMB3_SLAVE_ID $MG0_BASE $MG0_REMAP $MG0_SIZE
+
+printf "Initialized PCIe shared memory: base(0x%x), remap(0x%x), size(%d)\n" ${IPC_BASE} ${IPC_REMAP} ${IPC_SIZE}
