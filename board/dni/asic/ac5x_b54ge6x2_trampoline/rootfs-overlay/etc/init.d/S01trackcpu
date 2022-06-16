@@ -1,0 +1,25 @@
+#!/bin/sh
+
+start() {
+	start-stop-daemon -S --exec /etc/init.d/track_cpu.sh &
+}
+
+stop() {
+	echo "stop"
+}
+
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  *)
+        echo "Usage: $0 {start|stop}"
+        exit 1
+esac
+
+exit $?
+
