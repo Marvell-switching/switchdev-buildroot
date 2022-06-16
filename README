@@ -1,22 +1,22 @@
-			    INDEX
-                        1. Preparation
-                        2. Build & run with PCI IPC simulation
-                        3. Build & run with Netlink IPC simulation
-                        4. Workflow
-                        5. Use custom sources
-			6. Tested host configurations
+	INDEX
+	1. Preparation
+	2. Build & run with PCI IPC simulation
+	3. Build & run with Netlink IPC simulation
+	4. Workflow
+	5. Use custom sources
+	6. Tested host configurations
 
-This is the buildroot-external project to build image for the Marvell's Prestera Switch.
+This is the buildroot-external project to build an image for the Marvell's Prestera Switch.
 
-                        Preparation
-                        ===========
-Install openssl on host.
+	Preparation
+	===========
+Install OpenSSL on the host.
 For debian/Ubuntu:
 sudo apt-get install libssl-dev
-Make sure cpp and gcc has the same version:
+Make sure cpp and gcc have the same version:
 gcc -v && cpp -v
 
-Location of deliverables from github:
+Location of deliverables from GitHub:
 Kernel prestera driver: https://github.com/Marvell-switching/switchdev-prestera 
 CPSS drivers: https://github.com/Marvell-switching/mrvl-prestera
 CPSS appDemo binary: https://github.com/Marvell-switching/switchdev-binaries
@@ -27,16 +27,16 @@ This section describes the basic development workflow with buildroot
 to compile & deploy changes made for appDemo or switchdev driver.
 
 1) Build required defconfig
-First you need to choose and build configuration for the target
-board, for example lets it be AC5x board (AC5x SoC):
+First, you need to choose and build a configuration for the target
+board, for example, lets it be AC5x board (AC5x SoC):
 
     $ ./build.sh ac5x_trampoline
 
-For the first time it may take long time to download required packages, kernel
+For the first time, it may take a long time to download the required packages, kernel
 building.
 
-After success, all related files, binaries, copied sources for selected build are located
-in output/ac5x_trampoline. The folder contains standart Buildroot layout:
+After success, all related files, binaries, and copied sources for a selected build are located
+in output/ac5x_trampoline. The folder contains the standard Buildroot layout:
 
     output/ac5x_trampoline/
                          images/           - generated rootfs, kernel, dtb binaries
@@ -50,7 +50,7 @@ in output/ac5x_trampoline. The folder contains standart Buildroot layout:
                          
 
 2) Build packages:
-Buildroot has several packages which describes how to build components
+Buildroot has several packages which describe how to build components
 needed:
 
     package/cpss/fw-appdemo - appDemo (Cloned as binary blob from github)
@@ -59,13 +59,13 @@ needed:
 
 3) Rebuild sources after modification:
 
-    a) to cleanup and rebuild prestera_sw sources (full rebuild):
+    a) to clean-up and rebuild prestera_sw sources (full rebuild):
 
       make -C output/ac5x_trampoline prestera-swdev-kmod-dirclean prestera-swdev-kmod-dirclean
 
-4) Deploy rootfs, kernel, dtb to the tftpboot server for NFS boot:
+4) Deploy rootfs, kernel and dtb to the tftpboot server for NFS boot:
 
-To deploy everything via SSH to user's home folder on server for NFS boot, run the following:
+To deploy everything via SSH to the user's home folder on the server for NFS boot, run the following:
 
     make -C output/ac5x_trampoline deploy
 
@@ -74,7 +74,7 @@ To deploy everything via SSH to user's home folder on server for NFS boot, run t
                           Use custom sources
                           ==================
 To use custom sources for Buildroot packages (for example linux) it might be specified
-from command line:
+from the command line:
 
     $ LINUX_OVERRIDE_SRCDIR={PATH_TO_LINUX_SRC_DIR} make -C output/ac5x_trampoline
 
@@ -82,7 +82,7 @@ from command line:
 
     $ LINUX_OVERRIDE_SRCDIR={PATH_TO_LINUX_SRC_DIR} ./build.sh ac5x_trampoline
 
-this variable should be specified before each Buildroot invocation.
+This variable should be specified before each Buildroot invocation.
 
 6. Tested host configurations:
 
