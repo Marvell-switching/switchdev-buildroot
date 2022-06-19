@@ -1,3 +1,12 @@
+Features by driver version
+
+
+| Driver Version ||
+| ------------- | ------------- |
+| 3.2.2  (Based dentOS v2.5 features) | Based on Linux Kernel 5.15 |
+
+Please use GitHub [issues](../../issues) to report issues/request new enhancements.	
+	
 	INDEX
 	1. Preparation
 	2. Build & run with PCI IPC simulation
