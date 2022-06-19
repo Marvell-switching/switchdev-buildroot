@@ -17,8 +17,9 @@ Please use GitHub [issues](../../issues) to report issues/request new enhancemen
 
 This is the buildroot-external project to build an image for the Marvell's Prestera Switch.
 
-	Preparation
-	===========
+Preparation
+===========
+
 Install OpenSSL on the host.
 For debian/Ubuntu:
 sudo apt-get install libssl-dev
@@ -26,16 +27,21 @@ Make sure cpp and gcc have the same version:
 gcc -v && cpp -v
 
 Location of deliverables from GitHub:
-Kernel prestera driver: https://github.com/Marvell-switching/switchdev-prestera 
-CPSS drivers: https://github.com/Marvell-switching/mrvl-prestera
-CPSS appDemo binary: https://github.com/Marvell-switching/switchdev-binaries
+Kernel prestera driver:
+https://github.com/Marvell-switching/linux/tree/dent-linux-5.15.y
 
-                          Workflow
-                          ========
+CPSS drivers:https://github.com/Marvell-switching/mrvl-prestera
+
+CPSS appDemo binary:
+https://github.com/Marvell-switching/dent-artifacts/tree/slim
+
+Workflow
+========
+
 This section describes the basic development workflow with buildroot
 to compile & deploy changes made for appDemo or switchdev driver.
 
-1) Build required defconfig
+1.Build required defconfig
 First, you need to choose and build a configuration for the target
 board, for example, lets it be AC5x board (AC5x SoC):
 
@@ -58,21 +64,19 @@ in output/ac5x_trampoline. The folder contains the standard Buildroot layout:
                          build/xxx - xxx package sources with compiled files
                          
 
-2) Build packages:
-Buildroot has several packages which describe how to build components
-needed:
+2.Build packages: Buildroot has several packages which describe how to build components needed:
 
     package/cpss/fw-appdemo - appDemo (Cloned as binary blob from github)
     package/cpss/cpss-prestera-swdev-kmod - prestera_sw
     package/cpss/cpss-drivers-kmod - Int, Dma, Mbus kernel modules
 
-3) Rebuild sources after modification:
+3.Rebuild sources after modification:
 
     a) to clean-up and rebuild prestera_sw sources (full rebuild):
 
       make -C output/ac5x_trampoline prestera-swdev-kmod-dirclean prestera-swdev-kmod-dirclean
 
-4) Deploy rootfs, kernel and dtb to the tftpboot server for NFS boot:
+4.Deploy rootfs, kernel and dtb to the tftpboot server for NFS boot:
 
 To deploy everything via SSH to the user's home folder on the server for NFS boot, run the following:
 
@@ -80,9 +84,11 @@ To deploy everything via SSH to the user's home folder on the server for NFS boo
 
     it will deploy contents of output/<build_name>/images/deploy/* folder to SSH_IP:~/<build_name>
 
-                          Use custom sources
-                          ==================
-To use custom sources for Buildroot packages (for example linux) it might be specified
+Use custom sources
+==================
+
+5.To use custom sources for Buildroot packages (for example linux) it might be specified
+
 from the command line:
 
     $ LINUX_OVERRIDE_SRCDIR={PATH_TO_LINUX_SRC_DIR} make -C output/ac5x_trampoline
@@ -93,10 +99,10 @@ from the command line:
 
 This variable should be specified before each Buildroot invocation.
 
-6. Tested host configurations:
+6.Tested host configurations:
 
-6.a. Ubuntu 20.04.1 LTS focal, gcc version 9.3.0 (Ubuntu 9.3.0-17ubuntu1~20.04) ,
-	kernel 5.4.0-52-generic x86_64 GNU/Linux
+6.a. Ubuntu 20.04.1 LTS focal, gcc version 9.3.0 (Ubuntu 9.3.0-17ubuntu1~20.04) , kernel 5.4.0-52-generic x86_64 GNU/Linux
+
 6.b. Ubuntu 18.04.5 LTS bionic, gcc version 7.5.0 (Ubuntu 7.5.0-3ubuntu1~18.04) ,
 	kernel 4.15.0-132-generic x86_64 GNU/Linux
 
