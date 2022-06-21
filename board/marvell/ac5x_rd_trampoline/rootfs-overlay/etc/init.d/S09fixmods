@@ -1,0 +1,7 @@
+#!/bin/sh
+set -o xtrace
+
+cat /lib/modules/$(uname -r)/modules.alias | grep -v prestera > /lib/modules/$(uname -r)/modules_filtered.alias
+mv /lib/modules/$(uname -r)/modules_filtered.alias /lib/modules/$(uname -r)/modules.alias
+rm /lib/modules/$(uname -r)/modules.alias.bin
+

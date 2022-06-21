@@ -1,0 +1,307 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Device Tree For AC5x_rd.
+ *
+ * Copyright (C) 2021 Marvell
+ *
+ */
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Device Tree file for Marvell Alleycat 5x reference design board
+ * This board file supports the B configuration of the board
+ */
+#include "ac5-4gb.dtsi"
+
+/ {
+	sfp49: sfp-49 {
+		compatible = "sff,sfp";
+		i2c-bus = <&i2c0_sfp0>;
+/*
+		The below three lines is intended to support the SFP cage interfaces:
+		los-gpio - RX_LOSS
+		mod-def0-gpio - PRESENT_BIT
+		tx-disable-gpio - TX_ENABLE (or DISABLE)
+		To support these three signal the driver 'gpio_i2c' (Or compatible platform driver) must be enabled and supported.
+		Please refer to the 'gpio_i2c' section on this DTS file below.
+		It is currently not required for Amazon 'ethtool -m' support but it is intended for future use.
+		Can be skipped in this stage.
+                */
+		los-gpio = <&gpio_i2c 0 GPIO_ACTIVE_HIGH>;
+		mod-def0-gpio = <&gpio_i2c 1 GPIO_ACTIVE_LOW>;
+		tx-disable-gpio = <&gpio_i2c 2 GPIO_ACTIVE_HIGH>;
+		maximum-power-milliwatt = <2000>;
+	};
+
+	sfp50: sfp-50 {
+		compatible = "sff,sfp";
+		i2c-bus = <&i2c0_sfp1>;
+		los-gpio = <&gpio_i2c 3 GPIO_ACTIVE_HIGH>;
+		mod-def0-gpio = <&gpio_i2c 4 GPIO_ACTIVE_LOW>;
+		tx-disable-gpio = <&gpio_i2c 5 GPIO_ACTIVE_HIGH>;
+		maximum-power-milliwatt = <2000>;
+	};
+        sfp51: sfp-51 {
+		compatible = "sff,sfp";
+		i2c-bus = <&i2c0_sfp2>;
+		los-gpio = <&gpio_i2c 6 GPIO_ACTIVE_HIGH>;
+		mod-def0-gpio = <&gpio_i2c 7 GPIO_ACTIVE_LOW>;
+		tx-disable-gpio = <&gpio_i2c 8 GPIO_ACTIVE_HIGH>;
+		maximum-power-milliwatt = <2000>;
+	};
+        sfp52: sfp-52 {
+		compatible = "sff,sfp";
+		i2c-bus = <&i2c0_sfp3>;
+		los-gpio = <&gpio_i2c 9 GPIO_ACTIVE_HIGH>;
+		mod-def0-gpio = <&gpio_i2c 10 GPIO_ACTIVE_LOW>;
+		tx-disable-gpio = <&gpio_i2c 11 GPIO_ACTIVE_HIGH>;
+		maximum-power-milliwatt = <2000>;
+	};
+        sfp53: sfp-53 {
+		compatible = "sff,sfp";
+		i2c-bus = <&i2c0_sfp4>;
+		los-gpio = <&gpio_i2c 12 GPIO_ACTIVE_HIGH>;
+		mod-def0-gpio = <&gpio_i2c 13 GPIO_ACTIVE_LOW>;
+		tx-disable-gpio = <&gpio_i2c 14 GPIO_ACTIVE_HIGH>;
+		maximum-power-milliwatt = <2000>;
+	};
+        sfp54: sfp-54 {
+		compatible = "sff,sfp";
+		i2c-bus = <&i2c0_sfp5>;
+		los-gpio = <&gpio_i2c 15 GPIO_ACTIVE_HIGH>;
+		mod-def0-gpio = <&gpio_i2c 16 GPIO_ACTIVE_LOW>;
+		tx-disable-gpio = <&gpio_i2c 17 GPIO_ACTIVE_HIGH>;
+		maximum-power-milliwatt = <2000>;
+	};
+};
+
+&i2c0 {
+        status = "okay";
+        clock-frequency = <100000>;
+        i2cmux@70 {
+                compatible = "nxp,pca9548";
+                reg = <0x70>;
+                #address-cells = <1>;
+                #size-cells = <0>;
+        i2c-mux-idle-disconnect;
+
+                i2c0_sfp0: i2c@2 {
+                        reg = <2>;
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                };
+                i2c0_sfp1: i2c@3 {
+                        reg = <3>;
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                };
+
+                i2c0_sfp2: i2c@4 {
+                        reg = <4>;
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                };
+                i2c0_sfp3: i2c@5 {
+                        reg = <5>;
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                };
+                i2c0_sfp4: i2c@6 {
+                        reg = <6>;
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                };
+                i2c0_sfp5: i2c@7 {
+                        reg = <7>;
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                };
+	};
+};
+
+&i2c1 {
+        status = "okay";
+        clock-frequency = <100000>;
+	/*
+		This driver is intended to emulate GPIO interfaces on CPLD logic
+		accessed via I2C interface.
+		It is required only if the SFP Cage interfaces will be required:
+		los-gpio - RX_LOSS
+		mod-def0-gpio - PRESENT_BIT
+		tx-disable-gpio - TX_ENABLE (or DISABLE)
+		This driver is added as reference code and can be replaced with
+		another Platform Drivers that enables similar mapping.
+		It is currently not required for Amazon 'ethtool -m' support but
+		it is intended for future use.
+		Can be skipped in this stage.
+	*/
+	gpio_i2c: gpio-i2c@42 {
+		compatible = "gpio-i2c";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		reg = <0x42>;  /* CPLD/MUX I2C address */
+
+		gpio-map {
+			/* sfp0 */
+			sfp00_gpio00_loss {
+				reg-map = <0x40 (1 << 2)>; /* 0x40=register in the CPLD, (1 << 0)=Selected bit */
+				gpio-num = <0>;  /* Logical number used by: los-gpio, mod-def0-gpio and tx-disable-gpio */
+			};
+			sfp00_gpio01_pres {
+				reg-map = <0x41 (1 << 2)>; /* reg mask */
+				gpio-num = <1>;
+			};
+			sfp00_gpio02_tx_dis {
+				reg-map = <0x42 (1 << 2)>; /* reg mask */
+				gpio-num = <2>;
+			};
+
+			/* sfp1 */
+			sfp01_gpio00_sfp_loss {
+				reg-map = <0x40 (1 << 3)>; /* reg mask */
+				gpio-num = <3>;
+			};
+			sfp01_gpio01_sfp_pres {
+				reg-map = <0x41 (1 << 3)>; /* reg mask */
+				gpio-num = <4>;
+			};
+			sfp01_gpio02_tx_dis {
+				reg-map = <0x42 (1 << 3)>; /* reg mask */
+				gpio-num = <5>;
+			};
+                        /* sfp2 */
+			sfp02_gpio00_loss {
+				reg-map = <0x40 (1 << 4)>; /* reg mask */
+				gpio-num = <6>;  
+			};
+			sfp02_gpio01_pres {
+				reg-map = <0x41 (1 << 4)>; /* reg mask */
+				gpio-num = <7>;
+			};
+			sfp02_gpio02_tx_dis {
+				reg-map = <0x42 (1 << 4)>; /* reg mask */
+				gpio-num = <8>;
+			};
+
+			/* sfp3 */
+			sfp03_gpio00_sfp_loss {
+				reg-map = <0x40 (1 << 5)>; /* reg mask */
+				gpio-num = <9>;
+			};
+			sfp03_gpio01_sfp_pres {
+				reg-map = <0x41 (1 << 5)>; /* reg mask */
+				gpio-num = <10>;
+			};
+			sfp03_gpio02_tx_dis {
+				reg-map = <0x42 (1 << 5)>; /* reg mask */
+				gpio-num = <11>;
+			};
+                        /* sfp4 */
+			sfp04_gpio00_loss {
+				reg-map = <0x40 (1 << 6)>; /* reg mask */
+				gpio-num = <12>;  
+			};
+			sfp04_gpio01_pres {
+				reg-map = <0x41 (1 << 6)>; /* reg mask */
+				gpio-num = <13>;
+			};
+			sfp04_gpio02_tx_dis {
+				reg-map = <0x42 (1 << 6)>; /* reg mask */
+				gpio-num = <14>;
+			};
+
+			/* sfp5 */
+			sfp05_gpio00_sfp_loss {
+				reg-map = <0x40 (1 << 7)>; /* reg mask */
+				gpio-num = <15>;
+			};
+			sfp05_gpio01_sfp_pres {
+				reg-map = <0x41 (1 << 7)>; /* reg mask */
+				gpio-num = <16>;
+			};
+			sfp05_gpio02_tx_dis {
+				reg-map = <0x42 (1 << 7)>; /* reg mask */
+				gpio-num = <17>;
+			};
+		};
+	};
+
+};
+
+&eth0 {
+	status = "okay";
+	fixed-link {
+		speed = <1000>;
+		full-duplex;
+	};
+};
+
+&eth1 {
+	status = "okay";
+};
+
+&usb1 {
+	compatible = "chipidea,usb2";
+	phys = <&usb1phy>;
+	phy-names = "usb-phy";
+	dr_mode = "peripheral";
+};
+
+&prestera {
+	compatible = "marvell,prestera";
+	status = "okay";
+	reg = <0x0 0x7F900000 0x0 0x40000>;
+	ports {
+		port49 {
+			prestera,port-num = <49>;
+			sfp = <&sfp49>;
+		};
+		port50 {
+			prestera,port-num = <50>;
+			sfp = <&sfp50>;
+		};
+                port51 {
+			prestera,port-num = <51>;
+			sfp = <&sfp51>;
+		};
+		port52 {
+			prestera,port-num = <52>;
+			sfp = <&sfp52>;
+		};
+                port43 {
+			prestera,port-num = <53>;
+			sfp = <&sfp53>;
+		};
+		port54 {
+			prestera,port-num = <54>;
+			sfp = <&sfp54>;
+		};
+
+	};
+};
+
+&sfp49 {
+	status = "okay";
+};
+
+&sfp50 {
+	status = "okay";
+};
+
+&sfp51 {
+	status = "okay";
+};
+
+&sfp52 {
+	status = "okay";
+};
+
+&sfp53 {
+	status = "okay";
+};
+
+&sfp54 {
+	status = "okay";
+};
+

@@ -30,7 +30,7 @@ Location of deliverables from GitHub:
 Kernel prestera driver:
 https://github.com/Marvell-switching/linux/tree/dent-linux-5.15.y
 
-CPSS drivers:https://github.com/Marvell-switching/mrvl-prestera
+CPSS drivers: https://github.com/Marvell-switching/mrvl-prestera/tree/slim_lk515
 
 CPSS appDemo binary:
 https://github.com/Marvell-switching/dent-artifacts/tree/slim
@@ -66,7 +66,7 @@ in output/ac5x_trampoline. The folder contains the standard Buildroot layout:
 
 2.Build packages: Buildroot has several packages which describe how to build components needed:
 
-    package/cpss/fw-appdemo - appDemo (Cloned as binary blob from github)
+    package/cpss/cpss-agent - Firmware Agent (Cloned as binary blob from github)
     package/cpss/cpss-prestera-swdev-kmod - prestera_sw
     package/cpss/cpss-drivers-kmod - Int, Dma, Mbus kernel modules
 
