@@ -2,6 +2,10 @@
 
 start() {
 	printf "Starting agent: "
+	printf  "////////////////////////////////////////////////////////" /
+		"//////      PHY under init please wait...     //////////" /
+		"////////////////////////////////////////////////////////"
+
 	umask 077
 	if cat /proc/cmdline | grep -q "agentAutoStart=0"; then
 		echo "Debug mode - please start agent manually"

@@ -10,7 +10,7 @@
  * Device Tree file for Marvell Alleycat 5x reference design board
  * This board file supports the B configuration of the board
  */
-#include "ac5-4gb.dtsi"
+#include "ac5.dtsi"
 
 / {
 	sfp49: sfp-49 {
