@@ -3,7 +3,7 @@ Features by driver version
 
 | Driver Version ||
 | ------------- | ------------- |
-| 3.2.2  (Based dentOS v2.5 features) | Based on Linux Kernel 5.15 |
+| 3.2.3  (Based dentOS v2.5 features) | Based on Linux Kernel 5.15 |
 
 Please use GitHub [issues](../../issues) to report issues/request new enhancements.	
 	
@@ -41,7 +41,17 @@ Workflow
 This section describes the basic development workflow with buildroot
 to compile & deploy changes made for appDemo or switchdev driver.
 
-1.Build required defconfig
+1. In case 2540/2580 PHY is used, the PHY binary (hdr extension)
+   needs to be download from the Marvell support website at
+   https://www.marvell.com/support/extranets.html
+   (signing NDA is required, then you can obtain user and password
+   from your Marvell or distributor FAE).
+   Downloaded 2540/2580 PHY binary files with the hdr extension
+   should be copied to the following directory:
+
+   board/<vendor>/<vendor board name>/rootfs-overlay/etc/mvsw
+
+2. Build required defconfig
 First, you need to choose and build a configuration for the target
 board, for example, lets it be AC5x board (AC5x SoC):
 
@@ -64,19 +74,19 @@ in output/ac5x_trampoline. The folder contains the standard Buildroot layout:
                          build/xxx - xxx package sources with compiled files
                          
 
-2.Build packages: Buildroot has several packages which describe how to build components needed:
+3. Build packages: Buildroot has several packages which describe how to build components needed:
 
     package/cpss/cpss-agent - Firmware Agent (Cloned as binary blob from github)
     package/cpss/cpss-prestera-swdev-kmod - prestera_sw
     package/cpss/cpss-drivers-kmod - Int, Dma, Mbus kernel modules
 
-3.Rebuild sources after modification:
+4. Rebuild sources after modification:
 
     a) to clean-up and rebuild prestera_sw sources (full rebuild):
 
       make -C output/ac5x_trampoline prestera-swdev-kmod-dirclean prestera-swdev-kmod-dirclean
 
-4.Deploy rootfs, kernel and dtb to the tftpboot server for NFS boot:
+5. Deploy rootfs, kernel and dtb to the tftpboot server for NFS boot:
 
 To deploy everything via SSH to the user's home folder on the server for NFS boot, run the following:
 
