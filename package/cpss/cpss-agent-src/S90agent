@@ -1,0 +1,54 @@
+#!/bin/sh
+
+start() {
+	printf "Starting agent: "
+	printf  "////////////////////////////////////////////////////////" /
+		"//////      PHY under init please wait...     //////////" /
+		"////////////////////////////////////////////////////////"
+
+	umask 077
+	if cat /proc/cmdline | grep -q "agentAutoStart=0"; then
+		echo "Debug mode - please start agent manually"
+	else
+		start-stop-daemon -S -q  \
+			--exec /usr/bin/sw-agentd -- "$@" -daemon
+		sleep 1
+	pid=`pidof sw-agentd`
+	prlimit -p $pid --core=unlimited
+		if [ -f /etc/init.d/track_agent.sh ]
+		then
+			start-stop-daemon -S --exec /etc/init.d/track_agent.sh &
+		fi
+	fi
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
+}
+stop() {
+	printf "Stopping agent: "
+	start-stop-daemon -K -q --exec /usr/bin/sw-agentd
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
+}
+restart() {
+	stop
+	sleep 1
+	start "$@"
+}
+
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  restart|reload)
+	restart
+	;;
+  force-reload)
+	restart -R
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart|force-reload}"
+	exit 1
+esac
+
+exit $?

@@ -32,8 +32,11 @@ https://github.com/Marvell-switching/linux/tree/dent-linux-5.15.y
 
 CPSS drivers: https://github.com/Marvell-switching/mrvl-prestera/tree/slim_lk515
 
-CPSS appDemo binary:
+CPSS agent binary:
 https://github.com/Marvell-switching/dent-artifacts/tree/slim
+
+Customers with special agreement who have access to the CPSS agent source
+code should download it and extract it into the same build machine.
 
 Workflow
 ========
@@ -55,7 +58,16 @@ to compile & deploy changes made for appDemo or switchdev driver.
 First, you need to choose and build a configuration for the target
 board, for example, lets it be AC5x board (AC5x SoC):
 
+If you are building the agent from source (special agreement customers only),
+please point the environment variable to the directory containing the
+extracted source:
+
+export CPSS_AGENT_SRC_OVERRIDE_SRCDIR=/your_local_extracted_source_directory
+
+Normal builds with binary agent:
     $ ./build.sh ac5x_trampoline
+Builds with agent built from source code:
+    $ ./build.sh ac5x_trampoline_src
 
 For the first time, it may take a long time to download the required packages, kernel
 building.

@@ -1,0 +1,45 @@
+config BR2_PACKAGE_CPSS_AGENT_SRC
+	bool "cpss-AGENT_SRC"
+	select BR2_PACKAGE_LIBNL if !BR2_PACKAGE_CPSS_AGENT_SRC_SWDEV_PCI
+	select BR2_PACKAGE_LIBARCHIVE
+	help
+	  CPSS FW application application
+
+if BR2_PACKAGE_CPSS_AGENT_SRC
+
+config BR2_PACKAGE_CPSS_AGENT_SRC_SWDEV_PCI
+	bool "pci-swdev-ipc"
+	help
+	  Use PCI as communication bus between SwDevAgent and Switchdev.
+
+config BR2_PACKAGE_CPSS_AGENT_SRC_SWDEV_IPC_ADDR
+	string "pci-swdev-ipc-addr"
+	help
+	  Switchdev Agent IPC physical address
+
+config BR2_PACKAGE_CPSS_AGENT_SRC_SWDEV_IPC_SIZE
+	string "pci-swdev-ipc-size"
+	help
+	  Switchdev Agent IPC size
+
+config BR2_PACKAGE_CPSS_AGENT_SRC_SWDEV_TESTS
+	bool "pci-swdev-tests"
+	help
+	  Build FW application with swdev tests
+
+config BR2_PACKAGE_CPSS_AGENT_SRC_SWDEV_FW_VER
+	string "pci-swdev-fwver"
+	help
+	  Switchdev Agent FirmWare Version
+
+config BR2_PACKAGE_CPSS_AGENT_SRC_DEBUG_INFO
+	bool "cpss-app-demo-dbg-info"
+	help
+	  Build with debug info
+
+config BR2_PACKAGE_CPSS_AGENT_SRC_STATIC
+	bool "cpss-fw-application-static"
+	help
+	  Build FW application static in addition to dynamic
+
+endif

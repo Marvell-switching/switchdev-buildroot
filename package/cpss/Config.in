@@ -4,6 +4,12 @@ config BR2_PACKAGE_CPSS
 	help
 	  Marvell's Prestera SDK
 
+config BR2_PACKAGE_CPSS_SRC
+	bool "cpss"
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	help
+	  Build Marvell's Prestera SDK from Source, only for customers with special agreement which has this source
+
 config BR2_PACKAGE_CPSS_USE_CUSTOM_VERSION
 	bool "use cpss from custom git version"
 
@@ -12,7 +18,15 @@ config BR2_PACKAGE_CPSS_CUSTOM_VERSION
 
 if BR2_PACKAGE_CPSS
 
-source "$BR2_EXTERNAL_PRESTERA_PATH/package/cpss/cpss-agent/Config.in"
 source "$BR2_EXTERNAL_PRESTERA_PATH/package/cpss/cpss-drivers-kmod/Config.in"
 
 endif
+
+if BR2_PACKAGE_CPSS_SRC
+source "$BR2_EXTERNAL_PRESTERA_PATH/package/cpss/cpss-agent-src/Config.in"
+endif
+
+if !BR2_PACKAGE_CPSS_SRC
+source "$BR2_EXTERNAL_PRESTERA_PATH/package/cpss/cpss-agent/Config.in"
+endif
+
