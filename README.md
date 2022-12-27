@@ -1,3 +1,11 @@
+*** Important Note ***
+
+This SDK version is obsolete
+Please contact Marvell marketing / support / FAE
+for an updated version from the Marvell support website
+
+**************************************************
+
 Features by driver version
 
 
